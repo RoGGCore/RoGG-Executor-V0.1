@@ -1,9 +1,14 @@
--- [[ RoGG Script Hub v0.1 | REMASTERED ]] --
+-- [[ RoGG Script Hub v0.1 | NEON RED EDITION ]] --
 -- [[ Developer: RoGG | Owner: BilalGG ]] --
--- [[ Feature: Rectangular Notifications ]] --
+-- [[ Theme: Animated Neon Black & Red ]] --
 
 -- Tekrar çalışmayı önleme
 if getgenv().RoGG_Loaded then 
+    game:GetService("StarterGui"):SetCore("SendNotification", {
+        Title = "RoGG Hub",
+        Text = "Script zaten aktif!",
+        Duration = 3
+    })
     return 
 end
 getgenv().RoGG_Loaded = true
@@ -13,7 +18,6 @@ local UserInputService = game:GetService("UserInputService")
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
-local Lighting = game:GetService("Lighting")
 local CoreGui = game:GetService("CoreGui")
 local Workspace = game:GetService("Workspace")
 
@@ -23,24 +27,32 @@ local Mouse = LocalPlayer:GetMouse()
 
 -- AYARLAR (CONFIG)
 getgenv().Settings = {
+    -- Combat
     Aimbot = false,
     AimPart = "Head", 
     AimKey = Enum.UserInputType.MouseButton2,
     AimSmoothness = 0.2, 
     AimFOV = 150,
+    -- Visuals
     ESP = false,
+    ESP_Health = true, -- Can göstergesi
     ESP_TeamCheck = true,
-    Noclip = false,
-    Crosshair = false,
-    Fullbright = false,
+    ESP_Color = Color3.fromRGB(255, 0, 0), -- Varsayılan Kırmızı
+    ESP_R = 255,
+    ESP_G = 0,
+    ESP_B = 0,
+    -- Character
     WalkSpeed = 16,
     JumpPower = 50,
+    Fly = false,
+    FlySpeed = 50,
+    -- System
     MenuKey = Enum.KeyCode.Insert
 }
 
 -- [[ UI OLUŞTURMA ]] --
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "RoGG_Remastered"
+ScreenGui.Name = "RoGG_Neon_Red"
 ScreenGui.ResetOnSpawn = false 
 
 if syn and syn.protect_gui then 
@@ -52,113 +64,89 @@ else
     ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui") 
 end
 
--- BİLDİRİM ALANI (SAĞ ALT KÖŞE)
-local NotificationContainer = Instance.new("Frame", ScreenGui)
-NotificationContainer.Name = "Notifications"
-NotificationContainer.Size = UDim2.new(0, 250, 1, 0)
-NotificationContainer.Position = UDim2.new(1, -260, 0, 0) -- Sağ taraf
-NotificationContainer.BackgroundTransparency = 1
-local NotifLayout = Instance.new("UIListLayout", NotificationContainer)
-NotifLayout.SortOrder = Enum.SortOrder.LayoutOrder
-NotifLayout.VerticalAlignment = Enum.VerticalAlignment.Bottom
-NotifLayout.Padding = UDim.new(0, 5)
-
--- [[ ÖZEL BİLDİRİM FONKSİYONU (DİKDÖRTGEN KUTUCUK) ]] --
-local function SendNotif(text, status)
-    local Frame = Instance.new("Frame", NotificationContainer)
-    Frame.Size = UDim2.new(1, 0, 0, 40)
-    Frame.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
-    Frame.BackgroundTransparency = 0.1
-    Frame.BorderSizePixel = 0
-    
-    -- Dikdörtgen kenar çizgisi (Status rengine göre)
-    local Stroke = Instance.new("UIStroke", Frame)
-    Stroke.Thickness = 2
-    if status == true then
-        Stroke.Color = Color3.fromRGB(0, 255, 100) -- Yeşil (Açık)
-    elseif status == false then
-        Stroke.Color = Color3.fromRGB(255, 50, 50) -- Kırmızı (Kapalı)
-    else
-        Stroke.Color = Color3.fromRGB(0, 170, 255) -- Mavi (Bilgi)
-    end
-
-    local Label = Instance.new("TextLabel", Frame)
-    Label.Size = UDim2.new(1, -10, 1, 0)
-    Label.Position = UDim2.new(0, 10, 0, 0)
-    Label.BackgroundTransparency = 1
-    Label.Text = text
-    Label.TextColor3 = Color3.fromRGB(255, 255, 255)
-    Label.Font = Enum.Font.GothamBold
-    Label.TextSize = 14
-    Label.TextXAlignment = Enum.TextXAlignment.Left
-
-    -- Animasyon (Giriş)
-    Frame.BackgroundTransparency = 1
-    Label.TextTransparency = 1
-    TweenService:Create(Frame, TweenInfo.new(0.3), {BackgroundTransparency = 0.1}):Play()
-    TweenService:Create(Label, TweenInfo.new(0.3), {TextTransparency = 0}):Play()
-
-    -- Kaybolma
-    task.delay(2.5, function()
-        TweenService:Create(Frame, TweenInfo.new(0.5), {BackgroundTransparency = 1}):Play()
-        TweenService:Create(Label, TweenInfo.new(0.5), {TextTransparency = 1}):Play()
-        TweenService:Create(Stroke, TweenInfo.new(0.5), {Transparency = 1}):Play()
-        task.wait(0.5)
-        Frame:Destroy()
-    end)
-end
-
--- ANA MENÜ ÇERÇEVESİ
+-- ANA ÇERÇEVE (SİYAH)
 local Main = Instance.new("Frame", ScreenGui)
 Main.Name = "MainFrame"
-Main.Size = UDim2.new(0, 550, 0, 350)
-Main.Position = UDim2.new(0.5, -275, 0.5, -175)
-Main.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
+Main.Size = UDim2.new(0, 600, 0, 420) -- Biraz uzattık
+Main.Position = UDim2.new(0.5, -300, 0.5, -210)
+Main.BackgroundColor3 = Color3.fromRGB(8, 8, 10) -- Çok koyu siyah
 Main.BorderSizePixel = 0
--- Dikdörtgen tasarım için Corner Radius'u kaldırdım veya çok azalttım
-Instance.new("UICorner", Main).CornerRadius = UDim.new(0, 4)
+Main.ClipsDescendants = true
+Instance.new("UICorner", Main).CornerRadius = UDim.new(0, 8)
 
--- ÜST BAR (Sürükleme için)
-local TopBar = Instance.new("Frame", Main)
-TopBar.Size = UDim2.new(1, 0, 0, 40)
-TopBar.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
-Instance.new("UICorner", TopBar).CornerRadius = UDim.new(0, 4)
+-- NEON ETKİSİ (HAREKETLİ STROKE)
+local NeonStroke = Instance.new("UIStroke", Main)
+NeonStroke.Color = Color3.fromRGB(255, 0, 0)
+NeonStroke.Thickness = 2
+NeonStroke.Transparency = 0
 
-local Title = Instance.new("TextLabel", TopBar)
-Title.Text = "RoGG Hub | V0.1"
+-- NEON ANİMASYONU (PULSE/NEFES ALMA)
+task.spawn(function()
+    while Main.Parent do
+        -- Parlak
+        TweenService:Create(NeonStroke, TweenInfo.new(1.5, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {
+            Color = Color3.fromRGB(255, 0, 0), 
+            Thickness = 3,
+            Transparency = 0
+        }):Play()
+        task.wait(1.5)
+        -- Sönük
+        TweenService:Create(NeonStroke, TweenInfo.new(1.5, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {
+            Color = Color3.fromRGB(100, 0, 0), 
+            Thickness = 1,
+            Transparency = 0.5
+        }):Play()
+        task.wait(1.5)
+    end
+end)
+
+-- SOL MENÜ
+local Sidebar = Instance.new("Frame", Main)
+Sidebar.Size = UDim2.new(0, 160, 1, 0)
+Sidebar.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
+Instance.new("UICorner", Sidebar).CornerRadius = UDim.new(0, 8)
+
+local Title = Instance.new("TextLabel", Sidebar)
+Title.Text = "RoGG NEON"
 Title.Font = Enum.Font.GothamBlack
-Title.TextSize = 16
-Title.TextColor3 = Color3.fromRGB(0, 170, 255)
-Title.Size = UDim2.new(1, -20, 1, 0)
-Title.Position = UDim2.new(0, 10, 0, 0)
+Title.TextSize = 22
+Title.TextColor3 = Color3.fromRGB(255, 0, 0) -- Kırmızı Başlık
+Title.Size = UDim2.new(1, 0, 0, 60)
 Title.BackgroundTransparency = 1
-Title.TextXAlignment = Enum.TextXAlignment.Left
+-- Başlık Gölgelendirme
+local TitleShadow = Instance.new("TextLabel", Title)
+TitleShadow.Text = "RoGG NEON"
+TitleShadow.Font = Enum.Font.GothamBlack
+TitleShadow.TextSize = 22
+TitleShadow.TextColor3 = Color3.fromRGB(100, 0, 0)
+TitleShadow.Size = UDim2.new(1, 0, 1, 0)
+TitleShadow.Position = UDim2.new(0, 2, 0, 2)
+TitleShadow.BackgroundTransparency = 1
+TitleShadow.ZIndex = -1
 
--- TAB BUTONLARI ALANI
-local TabHolder = Instance.new("Frame", Main)
-TabHolder.Size = UDim2.new(0, 130, 1, -40)
-TabHolder.Position = UDim2.new(0, 0, 0, 40)
-TabHolder.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
-TabHolder.BorderSizePixel = 0
+local TabContainer = Instance.new("Frame", Sidebar)
+TabContainer.Size = UDim2.new(1, 0, 1, -70)
+TabContainer.Position = UDim2.new(0, 0, 0, 70)
+TabContainer.BackgroundTransparency = 1
 
-local TabList = Instance.new("UIListLayout", TabHolder)
-TabList.SortOrder = Enum.SortOrder.LayoutOrder
-TabList.Padding = UDim.new(0, 5)
+local TabListLayout = Instance.new("UIListLayout", TabContainer)
+TabListLayout.SortOrder = Enum.SortOrder.LayoutOrder
+TabListLayout.Padding = UDim.new(0, 8)
 
 -- İÇERİK ALANI
 local Pages = Instance.new("Frame", Main)
-Pages.Size = UDim2.new(1, -140, 1, -50)
-Pages.Position = UDim2.new(0, 140, 0, 45)
+Pages.Size = UDim2.new(1, -170, 1, -20)
+Pages.Position = UDim2.new(0, 170, 0, 10)
 Pages.BackgroundTransparency = 1
 
 -- SÜRÜKLEME
 local Dragging, DragInput, DragStart, StartPos
-TopBar.InputBegan:Connect(function(input)
+Sidebar.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 then
         Dragging = true; DragStart = input.Position; StartPos = Main.Position
     end
 end)
-TopBar.InputChanged:Connect(function(input)
+Sidebar.InputChanged:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseMovement then DragInput = input end
 end)
 UserInputService.InputChanged:Connect(function(input)
@@ -175,14 +163,19 @@ end)
 local tabs = {}
 
 local function CreateTab(name)
-    local TabBtn = Instance.new("TextButton", TabHolder)
-    TabBtn.Size = UDim2.new(1, 0, 0, 35)
-    TabBtn.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
+    local TabBtn = Instance.new("TextButton", TabContainer)
+    TabBtn.Size = UDim2.new(0.85, 0, 0, 35)
+    TabBtn.Position = UDim2.new(0.075, 0, 0, 0)
+    TabBtn.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
     TabBtn.Text = name
     TabBtn.TextColor3 = Color3.fromRGB(150, 150, 150)
     TabBtn.Font = Enum.Font.GothamBold
     TabBtn.TextSize = 14
-    TabBtn.BorderSizePixel = 0
+    Instance.new("UICorner", TabBtn).CornerRadius = UDim.new(0, 6)
+    
+    local TabStroke = Instance.new("UIStroke", TabBtn)
+    TabStroke.Color = Color3.fromRGB(50, 0, 0)
+    TabStroke.Thickness = 1
 
     local Page = Instance.new("ScrollingFrame", Pages)
     Page.Name = name .. "_Page"
@@ -191,7 +184,7 @@ local function CreateTab(name)
     Page.Visible = false
     Page.ScrollBarThickness = 2
     local PageLayout = Instance.new("UIListLayout", Page)
-    PageLayout.Padding = UDim.new(0, 8)
+    PageLayout.Padding = UDim.new(0, 10)
     PageLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
         Page.CanvasSize = UDim2.new(0, 0, 0, PageLayout.AbsoluteContentSize.Y + 10)
     end)
@@ -199,151 +192,224 @@ local function CreateTab(name)
     TabBtn.MouseButton1Click:Connect(function()
         for _, t in pairs(tabs) do
             t.Btn.TextColor3 = Color3.fromRGB(150, 150, 150)
-            t.Btn.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
+            t.Btn.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+            t.Btn.UIStroke.Color = Color3.fromRGB(50, 0, 0)
             t.Page.Visible = false
         end
-        TabBtn.TextColor3 = Color3.fromRGB(0, 170, 255) -- Aktif Mavi
-        TabBtn.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
+        TabBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+        TabBtn.BackgroundColor3 = Color3.fromRGB(40, 0, 0)
+        TabBtn.UIStroke.Color = Color3.fromRGB(255, 0, 0)
         Page.Visible = true
     end)
 
     table.insert(tabs, {Btn = TabBtn, Page = Page})
     if #tabs == 1 then 
-        TabBtn.TextColor3 = Color3.fromRGB(0, 170, 255)
-        TabBtn.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
+        TabBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+        TabBtn.BackgroundColor3 = Color3.fromRGB(40, 0, 0)
+        TabBtn.UIStroke.Color = Color3.fromRGB(255, 0, 0)
         Page.Visible = true
     end
     return Page
 end
 
-local function CreateRectToggle(parent, text, configName, callback)
-    local ToggleBtn = Instance.new("TextButton", parent)
-    ToggleBtn.Size = UDim2.new(1, -10, 0, 40)
-    ToggleBtn.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
-    ToggleBtn.Text = ""
-    ToggleBtn.AutoButtonColor = false
-    
-    -- Dikdörtgen Stroke
-    local Stroke = Instance.new("UIStroke", ToggleBtn)
-    Stroke.Color = Color3.fromRGB(60, 60, 60)
-    Stroke.Thickness = 1.5
+local function CreateToggle(parent, text, configName, callback)
+    local Frame = Instance.new("Frame", parent)
+    Frame.Size = UDim2.new(1, -5, 0, 40)
+    Frame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+    Instance.new("UICorner", Frame).CornerRadius = UDim.new(0, 6)
+    local Stroke = Instance.new("UIStroke", Frame)
+    Stroke.Color = Color3.fromRGB(60, 0, 0)
 
-    local Label = Instance.new("TextLabel", ToggleBtn)
-    Label.Text = text
-    Label.Size = UDim2.new(1, -40, 1, 0)
-    Label.Position = UDim2.new(0, 10, 0, 0)
+    local Label = Instance.new("TextLabel", Frame)
+    Label.Text = "  " .. text
+    Label.Size = UDim2.new(0.7, 0, 1, 0)
     Label.BackgroundTransparency = 1
-    Label.TextColor3 = Color3.fromRGB(200, 200, 200)
-    Label.Font = Enum.Font.GothamSemibold
+    Label.TextColor3 = Color3.fromRGB(220, 220, 220)
+    Label.Font = Enum.Font.GothamMedium
     Label.TextSize = 14
     Label.TextXAlignment = Enum.TextXAlignment.Left
 
-    local StatusBox = Instance.new("Frame", ToggleBtn)
-    StatusBox.Size = UDim2.new(0, 15, 0, 15)
-    StatusBox.Position = UDim2.new(1, -25, 0.5, -7.5)
-    StatusBox.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
-    StatusBox.BorderSizePixel = 0
-    local BoxStroke = Instance.new("UIStroke", StatusBox)
-    BoxStroke.Color = Color3.fromRGB(80, 80, 80)
-    BoxStroke.Thickness = 1
+    local Switch = Instance.new("TextButton", Frame)
+    Switch.Size = UDim2.new(0, 40, 0, 20)
+    Switch.Position = UDim2.new(1, -50, 0.5, -10)
+    Switch.BackgroundColor3 = Color3.fromRGB(10, 10, 10)
+    Switch.Text = ""
+    Instance.new("UICorner", Switch).CornerRadius = UDim.new(1, 0)
+    local SwitchStroke = Instance.new("UIStroke", Switch)
+    SwitchStroke.Color = Color3.fromRGB(100, 100, 100)
 
-    ToggleBtn.MouseButton1Click:Connect(function()
+    local Indicator = Instance.new("Frame", Switch)
+    Indicator.Size = UDim2.new(0, 16, 0, 16)
+    Indicator.Position = UDim2.new(0, 2, 0.5, -8)
+    Indicator.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
+    Instance.new("UICorner", Indicator).CornerRadius = UDim.new(1, 0)
+
+    Switch.MouseButton1Click:Connect(function()
         getgenv().Settings[configName] = not getgenv().Settings[configName]
         local state = getgenv().Settings[configName]
-        
         if state then
-            StatusBox.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
-            BoxStroke.Color = Color3.fromRGB(0, 170, 255)
-            Stroke.Color = Color3.fromRGB(0, 170, 255) -- Kenar parlar
-            -- DİKDÖRTGEN BİLDİRİM GÖNDER
-            SendNotif(text .. ": AÇIK", true)
+            TweenService:Create(Indicator, TweenInfo.new(0.2), {Position = UDim2.new(1, -18, 0.5, -8), BackgroundColor3 = Color3.fromRGB(255, 0, 0)}):Play()
+            SwitchStroke.Color = Color3.fromRGB(255, 0, 0)
         else
-            StatusBox.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
-            BoxStroke.Color = Color3.fromRGB(80, 80, 80)
-            Stroke.Color = Color3.fromRGB(60, 60, 60)
-            -- DİKDÖRTGEN BİLDİRİM GÖNDER
-            SendNotif(text .. ": KAPALI", false)
+            TweenService:Create(Indicator, TweenInfo.new(0.2), {Position = UDim2.new(0, 2, 0.5, -8), BackgroundColor3 = Color3.fromRGB(80, 80, 80)}):Play()
+            SwitchStroke.Color = Color3.fromRGB(100, 100, 100)
         end
         if callback then callback(state) end
     end)
 end
 
+local function CreateSlider(parent, text, min, max, default, callback)
+    local Frame = Instance.new("Frame", parent)
+    Frame.Size = UDim2.new(1, -5, 0, 50)
+    Frame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+    Instance.new("UICorner", Frame).CornerRadius = UDim.new(0, 6)
+    Instance.new("UIStroke", Frame).Color = Color3.fromRGB(60, 0, 0)
+
+    local Label = Instance.new("TextLabel", Frame)
+    Label.Text = text .. ": " .. default
+    Label.Size = UDim2.new(1, 0, 0.5, 0)
+    Label.BackgroundTransparency = 1
+    Label.TextColor3 = Color3.fromRGB(220, 220, 220)
+    Label.Font = Enum.Font.GothamMedium
+    Label.TextSize = 14
+
+    local Bar = Instance.new("Frame", Frame)
+    Bar.Size = UDim2.new(0.8, 0, 0, 4)
+    Bar.Position = UDim2.new(0.1, 0, 0.75, 0)
+    Bar.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+    Instance.new("UICorner", Bar).CornerRadius = UDim.new(1, 0)
+
+    local Fill = Instance.new("Frame", Bar)
+    Fill.Size = UDim2.new((default - min)/(max - min), 0, 1, 0)
+    Fill.BackgroundColor3 = Color3.fromRGB(255, 0, 0) -- Kırmızı Slider
+    Instance.new("UICorner", Fill).CornerRadius = UDim.new(1, 0)
+
+    local Trigger = Instance.new("TextButton", Bar)
+    Trigger.Size = UDim2.new(1, 0, 1, 0)
+    Trigger.BackgroundTransparency = 1
+    Trigger.Text = ""
+
+    local dragging = false
+    local function Update(input)
+        local pos = math.clamp((input.Position.X - Bar.AbsolutePosition.X) / Bar.AbsoluteSize.X, 0, 1)
+        Fill.Size = UDim2.new(pos, 0, 1, 0)
+        local val = math.floor(min + ((max - min) * pos))
+        Label.Text = text .. ": " .. val
+        if callback then callback(val) end
+    end
+
+    Trigger.InputBegan:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseButton1 then dragging = true; Update(input) end end)
+    UserInputService.InputEnded:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseButton1 then dragging = false end end)
+    UserInputService.InputChanged:Connect(function(input) if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then Update(input) end end)
+end
+
 -- [[ SAYFALAR & ÖGELER ]] --
 
+local TabMain = CreateTab("Ana Sayfa")
 local TabCombat = CreateTab("Savaş")
 local TabVisuals = CreateTab("Görsel")
-local TabPlayer = CreateTab("Oyuncu")
 local TabSettings = CreateTab("Ayarlar")
 
--- SAVAŞ
-CreateRectToggle(TabCombat, "Aimbot", "Aimbot", nil)
-local AimFOVCircle = Drawing.new("Circle") 
-AimFOVCircle.Color = Color3.fromRGB(0, 170, 255)
-AimFOVCircle.Thickness = 1
-AimFOVCircle.NumSides = 60
-AimFOVCircle.Radius = getgenv().Settings.AimFOV
-AimFOVCircle.Filled = false
-AimFOVCircle.Visible = false
-
--- GÖRSEL (YENİ ÖZELLİKLER)
-CreateRectToggle(TabVisuals, "ESP (Kutu/Line)", "ESP", nil)
-CreateRectToggle(TabVisuals, "Takım Kontrolü", "ESP_TeamCheck", nil)
-
-CreateRectToggle(TabVisuals, "Crosshair (Nişangah)", "Crosshair", function(state)
+-- ANA SAYFA (UÇMA & HIZ)
+CreateToggle(TabMain, "Uçma Modu (Fly) [X]", "Fly", function(state)
     if state then
-        -- Basit GUI Crosshair
-        local ch = Instance.new("Frame", ScreenGui)
-        ch.Name = "RoGG_Crosshair"
-        ch.Size = UDim2.new(0, 6, 0, 6)
-        ch.Position = UDim2.new(0.5, -3, 0.5, -3)
-        ch.BackgroundColor3 = Color3.fromRGB(0, 255, 0)
-        Instance.new("UICorner", ch).CornerRadius = UDim.new(1,0)
+        -- Basit Fly Mantığı
+        local bp = Instance.new("BodyVelocity")
+        bp.Name = "RoGG_Fly"
+        bp.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
+        bp.Velocity = Vector3.new(0,0,0)
+        if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+            bp.Parent = LocalPlayer.Character.HumanoidRootPart
+        end
     else
-        if ScreenGui:FindFirstChild("RoGG_Crosshair") then
-            ScreenGui.RoGG_Crosshair:Destroy()
+        if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") and LocalPlayer.Character.HumanoidRootPart:FindFirstChild("RoGG_Fly") then
+            LocalPlayer.Character.HumanoidRootPart.RoGG_Fly:Destroy()
         end
     end
 end)
 
-CreateRectToggle(TabVisuals, "Fullbright (Işık)", "Fullbright", function(state)
-    if state then
-        Lighting.Brightness = 2
-        Lighting.ClockTime = 14
-        Lighting.FogEnd = 100000
-        Lighting.GlobalShadows = false
-    else
-        Lighting.Brightness = 1
-        Lighting.GlobalShadows = true
-        Lighting.ClockTime = 14 -- Resetler ama tam eski haline döndürmek zor
+CreateSlider(TabMain, "Uçma Hızı", 10, 200, 50, function(val)
+    getgenv().Settings.FlySpeed = val
+end)
+
+CreateSlider(TabMain, "Yürüme Hızı", 16, 200, 16, function(val)
+    getgenv().Settings.WalkSpeed = val
+end)
+
+CreateSlider(TabMain, "Zıplama Gücü", 50, 300, 50, function(val)
+    if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
+        LocalPlayer.Character.Humanoid.UseJumpPower = true
+        LocalPlayer.Character.Humanoid.JumpPower = val
     end
 end)
 
--- OYUNCU (YENİ ÖZELLİKLER)
-CreateRectToggle(TabPlayer, "Noclip (Duvardan Geç)", "Noclip", nil)
+-- SAVAŞ
+CreateToggle(TabCombat, "Aimbot", "Aimbot", nil)
+CreateSlider(TabCombat, "FOV Alanı", 50, 500, 150, function(val)
+    getgenv().Settings.AimFOV = val
+end)
+
+-- GÖRSEL (ESP RENK & CAN)
+CreateToggle(TabVisuals, "ESP Aktif", "ESP", nil)
+CreateToggle(TabVisuals, "Can Göster (Health)", "ESP_Health", nil)
+
+local function UpdateColor()
+    getgenv().Settings.ESP_Color = Color3.fromRGB(getgenv().Settings.ESP_R, getgenv().Settings.ESP_G, getgenv().Settings.ESP_B)
+end
+
+CreateSlider(TabVisuals, "ESP Kırmızı (R)", 0, 255, 255, function(val)
+    getgenv().Settings.ESP_R = val
+    UpdateColor()
+end)
+CreateSlider(TabVisuals, "ESP Yeşil (G)", 0, 255, 0, function(val)
+    getgenv().Settings.ESP_G = val
+    UpdateColor()
+end)
+CreateSlider(TabVisuals, "ESP Mavi (B)", 0, 255, 0, function(val)
+    getgenv().Settings.ESP_B = val
+    UpdateColor()
+end)
 
 -- AYARLAR
 local CloseBtn = Instance.new("TextButton", TabSettings)
-CloseBtn.Size = UDim2.new(1, -10, 0, 40)
-CloseBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
-CloseBtn.Text = "Hileyi Kapat (UNLOAD)"
+CloseBtn.Size = UDim2.new(1, -5, 0, 40)
+CloseBtn.BackgroundColor3 = Color3.fromRGB(50, 0, 0)
+CloseBtn.Text = "Menüyü Gizle (INSERT)"
 CloseBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 CloseBtn.Font = Enum.Font.GothamBold
 CloseBtn.TextSize = 14
-Instance.new("UIStroke", CloseBtn).Color = Color3.fromRGB(255, 0, 0)
+Instance.new("UICorner", CloseBtn).CornerRadius = UDim.new(0, 6)
 CloseBtn.MouseButton1Click:Connect(function()
-    ScreenGui:Destroy()
-    AimFOVCircle:Remove()
-    getgenv().RoGG_Loaded = false
+    Main.Visible = false
 end)
 
 -- [[ DÖNGÜLER ]] --
 
--- Noclip Loop
-RunService.Stepped:Connect(function()
-    if getgenv().Settings.Noclip and LocalPlayer.Character then
-        for _, part in pairs(LocalPlayer.Character:GetDescendants()) do
-            if part:IsA("BasePart") and part.CanCollide then
-                part.CanCollide = false
+-- Fly Loop
+RunService.RenderStepped:Connect(function()
+    if getgenv().Settings.Fly and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+        local hrp = LocalPlayer.Character.HumanoidRootPart
+        local bp = hrp:FindFirstChild("RoGG_Fly")
+        if bp then
+            local move = Vector3.new(0,0,0)
+            if UserInputService:IsKeyDown(Enum.KeyCode.W) then move = move + Camera.CFrame.LookVector end
+            if UserInputService:IsKeyDown(Enum.KeyCode.S) then move = move - Camera.CFrame.LookVector end
+            if UserInputService:IsKeyDown(Enum.KeyCode.A) then move = move - Camera.CFrame.RightVector end
+            if UserInputService:IsKeyDown(Enum.KeyCode.D) then move = move + Camera.CFrame.RightVector end
+            if UserInputService:IsKeyDown(Enum.KeyCode.Space) then move = move + Vector3.new(0,1,0) end
+            if UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) then move = move - Vector3.new(0,1,0) end
+            
+            bp.Velocity = move * getgenv().Settings.FlySpeed
+        end
+    end
+end)
+
+-- WalkSpeed Loop
+task.spawn(function()
+    while task.wait(0.5) do
+        if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
+            if LocalPlayer.Character.Humanoid.WalkSpeed ~= getgenv().Settings.WalkSpeed then
+                LocalPlayer.Character.Humanoid.WalkSpeed = getgenv().Settings.WalkSpeed
             end
         end
     end
@@ -351,9 +417,6 @@ end)
 
 -- Aimbot Loop
 RunService.RenderStepped:Connect(function()
-    AimFOVCircle.Visible = getgenv().Settings.Aimbot
-    AimFOVCircle.Position = UserInputService:GetMouseLocation()
-    
     if getgenv().Settings.Aimbot and UserInputService:IsMouseButtonPressed(getgenv().Settings.AimKey) then
         local closest = nil
         local shortestDist = getgenv().Settings.AimFOV
@@ -362,6 +425,7 @@ RunService.RenderStepped:Connect(function()
         for _, v in pairs(Players:GetPlayers()) do
             if v ~= LocalPlayer and v.Character and v.Character:FindFirstChild(getgenv().Settings.AimPart) then
                 if getgenv().Settings.ESP_TeamCheck and v.Team == LocalPlayer.Team then continue end
+                
                 local pos, onScreen = Camera:WorldToViewportPoint(v.Character[getgenv().Settings.AimPart].Position)
                 if onScreen then
                     local dist = (Vector2.new(pos.X, pos.Y) - mousePos).Magnitude
@@ -381,35 +445,87 @@ RunService.RenderStepped:Connect(function()
     end
 end)
 
--- ESP Loop
+-- ESP Loop (Health + Renk)
 RunService.RenderStepped:Connect(function()
     if getgenv().Settings.ESP then
         for _, v in pairs(Players:GetPlayers()) do
             if v ~= LocalPlayer and v.Character then
-                local hl = v.Character:FindFirstChild("RoGG_ESP")
                 local isTeam = (v.Team == LocalPlayer.Team and getgenv().Settings.ESP_TeamCheck)
                 
                 if not isTeam then
+                    -- 1. Highlight (Kutu)
+                    local hl = v.Character:FindFirstChild("RoGG_ESP")
                     if not hl then
                         hl = Instance.new("Highlight", v.Character)
                         hl.Name = "RoGG_ESP"
                         hl.FillTransparency = 1
                         hl.OutlineTransparency = 0
-                        hl.OutlineColor = Color3.fromRGB(0, 170, 255) -- Mavi Highlight
                     end
+                    hl.OutlineColor = getgenv().Settings.ESP_Color -- Rengi Slider'dan al
+
+                    -- 2. Health Text (BillboardGui)
+                    local bg = v.Character:FindFirstChild("RoGG_Health")
+                    if getgenv().Settings.ESP_Health then
+                        if not bg and v.Character:FindFirstChild("Head") then
+                            bg = Instance.new("BillboardGui", v.Character)
+                            bg.Name = "RoGG_Health"
+                            bg.Adornee = v.Character.Head
+                            bg.Size = UDim2.new(0, 100, 0, 50)
+                            bg.StudsOffset = Vector3.new(0, 2, 0)
+                            bg.AlwaysOnTop = true
+                            
+                            local txt = Instance.new("TextLabel", bg)
+                            txt.Size = UDim2.new(1, 0, 1, 0)
+                            txt.BackgroundTransparency = 1
+                            txt.Font = Enum.Font.GothamBold
+                            txt.TextStrokeTransparency = 0
+                            txt.TextSize = 14
+                        end
+                        
+                        if bg then
+                            local hum = v.Character:FindFirstChild("Humanoid")
+                            if hum then
+                                local hp = math.floor(hum.Health)
+                                local maxHp = hum.MaxHealth
+                                local label = bg:FindFirstChild("TextLabel")
+                                if label then
+                                    label.Text = "[" .. hp .. "%]"
+                                    -- Rengi Cana Göre Değiştir (Yeşil -> Kırmızı)
+                                    label.TextColor3 = Color3.fromHSV((hp/maxHp)*0.3, 1, 1) 
+                                end
+                            end
+                        end
+                    else
+                        if bg then bg:Destroy() end
+                    end
+
                 else
-                    if hl then hl:Destroy() end
+                    -- Takım arkadaşı veya ESP kapalıysa sil
+                    if v.Character:FindFirstChild("RoGG_ESP") then v.Character.RoGG_ESP:Destroy() end
+                    if v.Character:FindFirstChild("RoGG_Health") then v.Character.RoGG_Health:Destroy() end
                 end
             end
         end
     else
+        -- Her şeyi sil
         for _, v in pairs(Players:GetPlayers()) do
-            if v.Character and v.Character:FindFirstChild("RoGG_ESP") then
-                v.Character.RoGG_ESP:Destroy()
+            if v.Character then
+                if v.Character:FindFirstChild("RoGG_ESP") then v.Character.RoGG_ESP:Destroy() end
+                if v.Character:FindFirstChild("RoGG_Health") then v.Character.RoGG_Health:Destroy() end
             end
         end
     end
 end)
 
--- İlk Açılış Bildirimi
-SendNotif("RoGG Hub Yüklendi!", true)
+-- Menü Aç/Kapa
+UserInputService.InputBegan:Connect(function(input)
+    if input.KeyCode == getgenv().Settings.MenuKey then
+        Main.Visible = not Main.Visible
+    end
+    -- Fly Aç/Kapa (X Tuşu)
+    if input.KeyCode == Enum.KeyCode.X then
+        getgenv().Settings.Fly = not getgenv().Settings.Fly
+    end
+end)
+
+game:GetService("StarterGui"):SetCore("SendNotification", {Title = "RoGG NEON", Text = "Yüklendi! Menü: INSERT", Duration = 3})
