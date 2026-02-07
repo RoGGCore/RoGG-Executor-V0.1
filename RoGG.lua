@@ -1,4 +1,4 @@
--- [[ RoGG Script Hub v0.6 | FIXED & MODERNIZED ]] --
+-- [[ RoGG Script Hub v0.1 | STABLE VERSION ]] --
 -- [[ Developer: RoGG | Owner: BilalGG ]] --
 
 -- Tekrar çalışmayı önleme
@@ -26,23 +26,22 @@ local Camera = Workspace.CurrentCamera
 -- AYARLAR (CONFIG)
 getgenv().Settings = {
     Aimbot = false,
-    AimPart = "Head", -- "Head" veya "HumanoidRootPart" (Gövde)
-    AimKey = Enum.UserInputType.MouseButton2, -- Sağ Tık
-    AimSmoothness = 0.2, -- 0.1 (Hızlı) - 1 (Yavaş)
-    AimFOV = 150, -- Aimbot'un çalışma alanı (Çember)
+    AimPart = "Head", 
+    AimKey = Enum.UserInputType.MouseButton2,
+    AimSmoothness = 0.2, 
+    AimFOV = 150,
     ESP = false,
-    ESP_TeamCheck = true,
+    ESP_TeamCheck = true, -- Varsayılan olarak açık
     WalkSpeed = 16,
     JumpPower = 50,
-    MenuKey = Enum.KeyCode.Insert -- Menü açma tuşu
+    MenuKey = Enum.KeyCode.Insert
 }
 
 -- [[ UI OLUŞTURMA ]] --
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "RoGG_Hub_Fixed"
-ScreenGui.ResetOnSpawn = false -- Karakter ölünce GUI gitmesin
+ScreenGui.Name = "RoGG_Hub_v0.1"
+ScreenGui.ResetOnSpawn = false 
 
--- Güvenlik (Executor Desteği Varsa)
 if syn and syn.protect_gui then 
     syn.protect_gui(ScreenGui) 
     ScreenGui.Parent = CoreGui 
@@ -60,26 +59,26 @@ Main.Position = UDim2.new(0.5, -300, 0.5, -200)
 Main.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
 Main.BorderSizePixel = 0
 Main.ClipsDescendants = true
-Main.Visible = true -- Başlangıçta açık
+Main.Visible = true 
 Instance.new("UICorner", Main).CornerRadius = UDim.new(0, 12)
 
--- MENÜ AÇ/KAPA MANTIĞI (INSERT TUŞU)
+-- MENÜ AÇ/KAPA (INSERT)
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
     if input.KeyCode == getgenv().Settings.MenuKey then
         Main.Visible = not Main.Visible
     end
 end)
 
--- SOL MENÜ (SIDEBAR)
+-- SOL MENÜ
 local Sidebar = Instance.new("Frame", Main)
 Sidebar.Size = UDim2.new(0, 160, 1, 0)
 Sidebar.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
 Instance.new("UICorner", Sidebar).CornerRadius = UDim.new(0, 12)
 
 local Title = Instance.new("TextLabel", Sidebar)
-Title.Text = "RoGG Hub"
+Title.Text = "RoGG Hub v0.1"
 Title.Font = Enum.Font.GothamBold
-Title.TextSize = 24
+Title.TextSize = 22
 Title.TextColor3 = Color3.fromRGB(0, 170, 255)
 Title.Size = UDim2.new(1, 0, 0, 60)
 Title.BackgroundTransparency = 1
@@ -93,13 +92,13 @@ local TabListLayout = Instance.new("UIListLayout", TabContainer)
 TabListLayout.SortOrder = Enum.SortOrder.LayoutOrder
 TabListLayout.Padding = UDim.new(0, 8)
 
--- SAYFALAR ALANI
+-- SAYFALAR
 local Pages = Instance.new("Frame", Main)
 Pages.Size = UDim2.new(1, -170, 1, -20)
 Pages.Position = UDim2.new(0, 170, 0, 10)
 Pages.BackgroundTransparency = 1
 
--- SÜRÜKLEME (DRAG)
+-- SÜRÜKLEME
 local Dragging, DragInput, DragStart, StartPos
 Sidebar.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 then
@@ -155,7 +154,7 @@ local function CreateTab(name)
     end)
 
     table.insert(tabs, {Btn = TabBtn, Page = Page})
-    if #tabs == 1 then -- İlk tab'ı aktif et
+    if #tabs == 1 then 
         TabBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
         TabBtn.BackgroundColor3 = Color3.fromRGB(45, 45, 50)
         Page.Visible = true
@@ -205,17 +204,34 @@ local function CreateToggle(parent, text, configName, callback)
     end)
 end
 
--- [[ ÖZELLİKLER VE MANTIK ]] --
+local function CreateButton(parent, text, callback)
+    local Btn = Instance.new("TextButton", parent)
+    Btn.Size = UDim2.new(1, -10, 0, 40)
+    Btn.BackgroundColor3 = Color3.fromRGB(45, 45, 50)
+    Btn.Text = text
+    Btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    Btn.Font = Enum.Font.GothamBold
+    Btn.TextSize = 14
+    Instance.new("UICorner", Btn).CornerRadius = UDim.new(0, 8)
+    
+    Btn.MouseButton1Click:Connect(function()
+        TweenService:Create(Btn, TweenInfo.new(0.1), {Size = UDim2.new(0.95, -10, 0, 38)}):Play()
+        task.wait(0.1)
+        TweenService:Create(Btn, TweenInfo.new(0.1), {Size = UDim2.new(1, -10, 0, 40)}):Play()
+        pcall(callback)
+    end)
+end
 
--- SAYFALAR
+-- [[ SAYFALAR & ÖGELER ]] --
+
 local TabCombat = CreateTab("Combat")
 local TabVisuals = CreateTab("Visuals")
+local TabScripts = CreateTab("Scripts") -- Server Hub
 local TabSettings = CreateTab("Settings")
 
--- COMBAT TAB
+-- COMBAT
 CreateToggle(TabCombat, "Aimbot (Sağ Tık)", "Aimbot", nil)
-
-local AimFOVCircle = Drawing.new("Circle") -- FOV Çemberi
+local AimFOVCircle = Drawing.new("Circle") 
 AimFOVCircle.Color = Color3.fromRGB(0, 170, 255)
 AimFOVCircle.Thickness = 1
 AimFOVCircle.NumSides = 60
@@ -223,46 +239,42 @@ AimFOVCircle.Radius = getgenv().Settings.AimFOV
 AimFOVCircle.Filled = false
 AimFOVCircle.Visible = false
 
--- VISUALS TAB
+-- VISUALS (ESP)
 CreateToggle(TabVisuals, "ESP (Wallhack)", "ESP", nil)
 CreateToggle(TabVisuals, "Takım Kontrolü (Team Check)", "ESP_TeamCheck", nil)
 
--- SETTINGS TAB
-local CloseBtn = Instance.new("TextButton", TabSettings)
-CloseBtn.Size = UDim2.new(1, -10, 0, 40)
-CloseBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
-CloseBtn.Text = "Hileyi Kapat (Panic)"
-CloseBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-CloseBtn.Font = Enum.Font.GothamBold
-CloseBtn.TextSize = 14
-Instance.new("UICorner", CloseBtn).CornerRadius = UDim.new(0, 8)
-CloseBtn.MouseButton1Click:Connect(function()
+-- SCRIPTS (HUB)
+CreateButton(TabScripts, "Infinite Yield (Admin)", function()
+    loadstring(game:HttpGet('https://raw.githubusercontent.com/EdgeIY/infiniteyield/master/source'))()
+end)
+CreateButton(TabScripts, "Fly Gui V3", function()
+    loadstring(game:HttpGet("https://raw.githubusercontent.com/XNEOFF/FlyGuiV3/main/FlyGuiV3.txt"))()
+end)
+
+-- SETTINGS
+CreateButton(TabSettings, "Kapat / Unload", function()
     ScreenGui:Destroy()
     AimFOVCircle:Remove()
     getgenv().RoGG_Loaded = false
 end)
 
--- [[ ARKAPLAN MANTIKLARI (SİHİR BURADA) ]] --
+-- [[ DÖNGÜLER VE MANTIK ]] --
 
--- 1. YENİ AIMBOT FONKSİYONU (Matematiksel Olarak Düzeltildi)
+-- AIMBOT MANTIĞI
 local function GetClosestPlayer()
     local closestTarget = nil
-    local shortestDistance = getgenv().Settings.AimFOV -- Sadece çember içindekileri al
+    local shortestDistance = getgenv().Settings.AimFOV 
 
     for _, v in pairs(Players:GetPlayers()) do
         if v ~= LocalPlayer and v.Character and v.Character:FindFirstChild(getgenv().Settings.AimPart) then
-            -- Takım Kontrolü
             if getgenv().Settings.ESP_TeamCheck and v.Team == LocalPlayer.Team then continue end
             
-            -- Canlı mı?
             local humanoid = v.Character:FindFirstChild("Humanoid")
             if not humanoid or humanoid.Health <= 0 then continue end
 
-            -- Ekranda mı?
             local pos, onScreen = Camera:WorldToViewportPoint(v.Character[getgenv().Settings.AimPart].Position)
             
             if onScreen then
-                -- Mouse'un ekranın ortasındaki konumu (GUI inset sorunu olmadan)
                 local mousePos = UserInputService:GetMouseLocation()
                 local dist = (Vector2.new(pos.X, pos.Y) - mousePos).Magnitude
 
@@ -277,52 +289,50 @@ local function GetClosestPlayer()
 end
 
 RunService.RenderStepped:Connect(function()
-    -- FOV Çemberini Güncelle
     AimFOVCircle.Visible = getgenv().Settings.Aimbot
     AimFOVCircle.Position = UserInputService:GetMouseLocation()
     
-    -- Aimbot Çalıştır
     if getgenv().Settings.Aimbot and UserInputService:IsMouseButtonPressed(getgenv().Settings.AimKey) then
         local target = GetClosestPlayer()
         if target then
-            -- Yumuşak Nişan Alma (Smoothness)
             local currentCFrame = Camera.CFrame
             local targetCFrame = CFrame.new(currentCFrame.Position, target.Position)
-            
             Camera.CFrame = currentCFrame:Lerp(targetCFrame, getgenv().Settings.AimSmoothness)
         end
     end
 end)
 
--- 2. YENİ ESP FONKSİYONU (Highlight Yöntemi)
-local function AddHighlight(char)
-    if not char:FindFirstChild("RoGG_ESP") then
-        local hl = Instance.new("Highlight")
-        hl.Name = "RoGG_ESP"
-        hl.Adornee = char
-        hl.Parent = char -- Doğrudan karaktere koymak en garantisidir
-        hl.FillTransparency = 1
-        hl.OutlineTransparency = 0
-        hl.OutlineColor = Color3.fromRGB(255, 40, 40)
-    end
-end
-
+-- ESP MANTIĞI (DÜZELTİLDİ!)
 RunService.RenderStepped:Connect(function()
     if getgenv().Settings.ESP then
         for _, v in pairs(Players:GetPlayers()) do
             if v ~= LocalPlayer and v.Character then
                 
-                -- Takım Kontrolü
-                local isTeammate = (getgenv().Settings.ESP_TeamCheck and v.Team == LocalPlayer.Team)
-                
-                if isTeammate then
-                    -- Eğer takım arkadaşıysa ve ESP varsa sil
-                    if v.Character:FindFirstChild("RoGG_ESP") then
-                        v.Character.RoGG_ESP:Destroy()
+                local hl = v.Character:FindFirstChild("RoGG_ESP")
+                local isTeammate = (v.Team == LocalPlayer.Team)
+                local shouldShow = true
+
+                -- Team Check Kontrolü
+                if getgenv().Settings.ESP_TeamCheck and isTeammate then
+                    shouldShow = false
+                end
+
+                if shouldShow then
+                    if not hl then
+                        hl = Instance.new("Highlight", v.Character)
+                        hl.Name = "RoGG_ESP"
+                        hl.FillTransparency = 1
+                        hl.OutlineTransparency = 0
+                    end
+                    -- Renk Ayarı
+                    if isTeammate then
+                        hl.OutlineColor = Color3.fromRGB(0, 255, 0) -- Dost Yeşil
+                    else
+                        hl.OutlineColor = Color3.fromRGB(255, 40, 40) -- Düşman Kırmızı
                     end
                 else
-                    -- Düşmansa ve ESP yoksa ekle
-                    AddHighlight(v.Character)
+                    -- Gösterilmemesi gerekiyorsa ama varsa SİL
+                    if hl then hl:Destroy() end
                 end
             end
         end
@@ -336,4 +346,4 @@ RunService.RenderStepped:Connect(function()
     end
 end)
 
-game:GetService("StarterGui"):SetCore("SendNotification", {Title = "RoGG Hub v0.6", Text = "Insert ile menüyü aç/kapa!", Duration = 5})
+game:GetService("StarterGui"):SetCore("SendNotification", {Title = "RoGG Hub v0.1", Text = "Menü Tuşu: INSERT", Duration = 5})
