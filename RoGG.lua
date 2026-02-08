@@ -1,14 +1,15 @@
--- [[ RoGG Script Hub v0.2 | FIXED EDITION ]] --
+-- [[ RoGG Script Hub v0.3 | ULTIMATE EDITION ]] --
 -- [[ Developer: RoGG | Owner: BilalGG ]] --
--- [[ Features: Working Tracers, ESP, Aimbot ]] --
+-- [[ Features: Combat, Visuals, Movement, Utility ]] --
 
--- Önceki instance'ları temizle
-if getgenv().RoGG_Loaded then
-    getgenv().RoGG_Loaded = false
-    -- Varsa eski GUI'yi sil
-    if game.CoreGui:FindFirstChild("RoGG_Fixed_UI") then
-        game.CoreGui.RoGG_Fixed_UI:Destroy()
-    end
+-- Tekrar çalışmayı önleme
+if getgenv().RoGG_Loaded then 
+    game:GetService("StarterGui"):SetCore("SendNotification", {
+        Title = "RoGG Hub",
+        Text = "Script zaten aktif! Menü için: INSERT",
+        Duration = 3
+    })
+    return 
 end
 getgenv().RoGG_Loaded = true
 
@@ -17,37 +18,49 @@ local UserInputService = game:GetService("UserInputService")
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
+local Lighting = game:GetService("Lighting")
 local CoreGui = game:GetService("CoreGui")
 local Workspace = game:GetService("Workspace")
-local Camera = Workspace.CurrentCamera
 
 local LocalPlayer = Players.LocalPlayer
+local Camera = Workspace.CurrentCamera
 local Mouse = LocalPlayer:GetMouse()
 
--- AYARLAR
+-- AYARLAR (CONFIG)
 getgenv().Settings = {
+    -- Combat
     Aimbot = false,
-    AimPart = "Head",
+    AimPart = "Head", 
     AimKey = Enum.UserInputType.MouseButton2,
-    AimSmoothness = 0.2,
+    AimSmoothness = 0.1, 
     AimFOV = 150,
+    NoRecoil = false,
+    -- Visuals
     ESP_Box = false,
     ESP_Name = false,
+    ESP_Distance = false,
     ESP_Tracers = false,
     ESP_TeamCheck = true,
-    ESP_Color = Color3.fromRGB(0, 170, 255), -- Mavi Tema
+    ESP_Color = Color3.fromRGB(0, 170, 255),
+    Crosshair = false,
+    Fullbright = false,
+    -- Movement
+    Fly = false,
+    FlySpeed = 50,
+    Noclip = false,
+    InfJump = false,
+    WalkSpeed = 16,
+    JumpPower = 50,
+    -- System
     MenuKey = Enum.KeyCode.Insert
 }
 
--- TRACER ÇİZİM TABLOSU (Çizgiler için)
-local TracerLines = {}
-
 -- [[ UI OLUŞTURMA ]] --
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "RoGG_Fixed_UI"
+ScreenGui.Name = "RoGG_Ultimate"
 if syn and syn.protect_gui then syn.protect_gui(ScreenGui) ScreenGui.Parent = CoreGui else ScreenGui.Parent = CoreGui end
 
--- BİLDİRİM ALANI
+-- BİLDİRİM SİSTEMİ
 local NotificationContainer = Instance.new("Frame", ScreenGui)
 NotificationContainer.Name = "Notifications"
 NotificationContainer.Size = UDim2.new(0, 250, 1, 0)
@@ -89,8 +102,8 @@ end
 
 -- ANA MENÜ
 local Main = Instance.new("Frame", ScreenGui)
-Main.Size = UDim2.new(0, 550, 0, 400)
-Main.Position = UDim2.new(0.5, -275, 0.5, -200)
+Main.Size = UDim2.new(0, 600, 0, 450)
+Main.Position = UDim2.new(0.5, -300, 0.5, -225)
 Main.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
 Instance.new("UICorner", Main).CornerRadius = UDim.new(0, 6)
 
@@ -100,7 +113,7 @@ TopBar.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
 Instance.new("UICorner", TopBar).CornerRadius = UDim.new(0, 6)
 
 local Title = Instance.new("TextLabel", TopBar)
-Title.Text = "RoGG Hub | Fixed"
+Title.Text = "RoGG Hub | v0.3 ULTIMATE"
 Title.Font = Enum.Font.GothamBlack
 Title.TextSize = 16
 Title.TextColor3 = Color3.fromRGB(0, 170, 255)
@@ -111,15 +124,15 @@ Title.TextXAlignment = Enum.TextXAlignment.Left
 
 -- TABLAR
 local TabHolder = Instance.new("Frame", Main)
-TabHolder.Size = UDim2.new(0, 130, 1, -40)
+TabHolder.Size = UDim2.new(0, 140, 1, -40)
 TabHolder.Position = UDim2.new(0, 0, 0, 40)
 TabHolder.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
 local TabList = Instance.new("UIListLayout", TabHolder)
 TabList.Padding = UDim.new(0, 5)
 
 local Pages = Instance.new("Frame", Main)
-Pages.Size = UDim2.new(1, -140, 1, -50)
-Pages.Position = UDim2.new(0, 140, 0, 45)
+Pages.Size = UDim2.new(1, -150, 1, -50)
+Pages.Position = UDim2.new(0, 150, 0, 45)
 Pages.BackgroundTransparency = 1
 
 local tabs = {}
@@ -149,15 +162,11 @@ local function CreateTab(name)
         page.Visible = true
     end)
     table.insert(tabs, {Btn = btn, Page = page})
-    if #tabs == 1 then -- İlkini aç
-        btn.TextColor3 = Color3.fromRGB(0, 170, 255)
-        btn.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
-        page.Visible = true
-    end
+    if #tabs == 1 then btn.TextColor3 = Color3.fromRGB(0, 170, 255); btn.BackgroundColor3 = Color3.fromRGB(30, 30, 35); page.Visible = true end
     return page
 end
 
-local function CreateToggle(parent, text, configName)
+local function CreateRectToggle(parent, text, configName, callback)
     local btn = Instance.new("TextButton", parent)
     btn.Size = UDim2.new(1, -10, 0, 40)
     btn.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
@@ -189,13 +198,55 @@ local function CreateToggle(parent, text, configName)
             Status.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
             SendNotif(text .. ": OFF", false)
         end
+        if callback then callback(state) end
     end)
+end
+
+local function CreateSlider(parent, text, min, max, default, callback)
+    local Frame = Instance.new("Frame", parent)
+    Frame.Size = UDim2.new(1, -10, 0, 50)
+    Frame.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
+    Instance.new("UICorner", Frame).CornerRadius = UDim.new(0, 4)
+
+    local Label = Instance.new("TextLabel", Frame)
+    Label.Text = text .. ": " .. default
+    Label.Size = UDim2.new(1, 0, 0.5, 0)
+    Label.BackgroundTransparency = 1
+    Label.TextColor3 = Color3.fromRGB(200, 200, 200)
+    Label.Font = Enum.Font.GothamMedium
+    Label.TextSize = 14
+
+    local Bar = Instance.new("Frame", Frame)
+    Bar.Size = UDim2.new(0.8, 0, 0, 4)
+    Bar.Position = UDim2.new(0.1, 0, 0.75, 0)
+    Bar.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+
+    local Fill = Instance.new("Frame", Bar)
+    Fill.Size = UDim2.new((default - min)/(max - min), 0, 1, 0)
+    Fill.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
+
+    local Trigger = Instance.new("TextButton", Bar)
+    Trigger.Size = UDim2.new(1, 0, 1, 0)
+    Trigger.BackgroundTransparency = 1
+    Trigger.Text = ""
+
+    local dragging = false
+    local function Update(input)
+        local pos = math.clamp((input.Position.X - Bar.AbsolutePosition.X) / Bar.AbsoluteSize.X, 0, 1)
+        Fill.Size = UDim2.new(pos, 0, 1, 0)
+        local val = math.floor(min + ((max - min) * pos))
+        Label.Text = text .. ": " .. val
+        if callback then callback(val) end
+    end
+    Trigger.InputBegan:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseButton1 then dragging = true; Update(input) end end)
+    UserInputService.InputEnded:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseButton1 then dragging = false end end)
+    UserInputService.InputChanged:Connect(function(input) if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then Update(input) end end)
 end
 
 local function CreateButton(parent, text, callback)
     local btn = Instance.new("TextButton", parent)
     btn.Size = UDim2.new(1, -10, 0, 40)
-    btn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+    btn.BackgroundColor3 = Color3.fromRGB(45, 45, 50)
     btn.Text = text
     btn.TextColor3 = Color3.fromRGB(255, 255, 255)
     btn.Font = Enum.Font.GothamBold
@@ -207,55 +258,80 @@ end
 -- TABLAR
 local TabCombat = CreateTab("Combat")
 local TabVisuals = CreateTab("Visuals")
+local TabMovement = CreateTab("Movement")
 local TabSettings = CreateTab("Settings")
 
--- İÇERİK
-CreateToggle(TabCombat, "Aimbot", "Aimbot")
-CreateToggle(TabVisuals, "Kutu ESP (Box)", "ESP_Box")
-CreateToggle(TabVisuals, "İsim ESP (Names)", "ESP_Name")
-CreateToggle(TabVisuals, "Çizgiler (Tracers)", "ESP_Tracers")
-CreateToggle(TabVisuals, "Takım Kontrolü", "ESP_TeamCheck")
+-- COMBAT
+CreateRectToggle(TabCombat, "Aimbot", "Aimbot")
+CreateRectToggle(TabCombat, "No Recoil (Shake)", "NoRecoil")
+CreateSlider(TabCombat, "FOV Size", 50, 500, 150, function(val) getgenv().Settings.AimFOV = val end)
+CreateSlider(TabCombat, "Smoothness", 1, 20, 2, function(val) getgenv().Settings.AimSmoothness = val / 10 end)
+local AimFOVCircle = Drawing.new("Circle")
+AimFOVCircle.Color = Color3.fromRGB(0, 170, 255); AimFOVCircle.Thickness = 1; AimFOVCircle.NumSides = 60; AimFOVCircle.Filled = false
 
-CreateButton(TabSettings, "Hileyi Kapat (Unload)", function()
-    ScreenGui:Destroy()
-    getgenv().RoGG_Loaded = false
-    -- Tracerları temizle
-    for _, line in pairs(TracerLines) do line:Remove() end
+-- VISUALS
+CreateRectToggle(TabVisuals, "Kutu ESP (Box)", "ESP_Box")
+CreateRectToggle(TabVisuals, "İsim ESP (Names)", "ESP_Name")
+CreateRectToggle(TabVisuals, "Mesafe (Distance)", "ESP_Distance")
+CreateRectToggle(TabVisuals, "Çizgiler (Tracers)", "ESP_Tracers")
+CreateRectToggle(TabVisuals, "Takım Kontrolü", "ESP_TeamCheck")
+CreateRectToggle(TabVisuals, "Crosshair", "Crosshair", function(state)
+    if state then
+        local ch = Instance.new("Frame", ScreenGui); ch.Name = "Crosshair"; ch.Size = UDim2.new(0, 6, 0, 6); ch.Position = UDim2.new(0.5, -3, 0.5, -3); ch.BackgroundColor3 = Color3.fromRGB(0, 255, 0); Instance.new("UICorner", ch).CornerRadius = UDim.new(1,0)
+    else if ScreenGui:FindFirstChild("Crosshair") then ScreenGui.Crosshair:Destroy() end end
+end)
+CreateRectToggle(TabVisuals, "Fullbright", "Fullbright", function(state)
+    if state then Lighting.Brightness = 2; Lighting.ClockTime = 14; Lighting.GlobalShadows = false else Lighting.Brightness = 1; Lighting.GlobalShadows = true end
 end)
 
--- FOV ÇEMBERİ
-local AimFOVCircle = Drawing.new("Circle")
-AimFOVCircle.Color = Color3.fromRGB(0, 170, 255)
-AimFOVCircle.Thickness = 1
-AimFOVCircle.NumSides = 60
-AimFOVCircle.Radius = getgenv().Settings.AimFOV
-AimFOVCircle.Filled = false
-AimFOVCircle.Visible = false
+-- MOVEMENT
+CreateRectToggle(TabMovement, "Fly", "Fly")
+CreateRectToggle(TabMovement, "Noclip", "Noclip")
+CreateRectToggle(TabMovement, "Infinite Jump", "InfJump")
+CreateSlider(TabMovement, "Fly Speed", 10, 200, 50, function(val) getgenv().Settings.FlySpeed = val end)
+CreateSlider(TabMovement, "WalkSpeed", 16, 200, 16, function(val) getgenv().Settings.WalkSpeed = val end)
+CreateSlider(TabMovement, "JumpPower", 50, 200, 50, function(val) getgenv().Settings.JumpPower = val end)
 
--- [[ DÖNGÜLER (MANTIK) ]] --
+-- SETTINGS
+CreateButton(TabSettings, "İzle (Spectate Random)", function()
+    local list = Players:GetPlayers()
+    local target = list[math.random(1, #list)]
+    if target ~= LocalPlayer and target.Character then Camera.CameraSubject = target.Character.Humanoid end
+end)
+CreateButton(TabSettings, "İzlemeyi Bırak", function() Camera.CameraSubject = LocalPlayer.Character.Humanoid end)
+CreateButton(TabSettings, "Hileyi Kapat (UNLOAD)", function() ScreenGui:Destroy(); AimFOVCircle:Remove(); getgenv().RoGG_Loaded = false end)
 
--- TRACER SİSTEMİ (Çalışan Hali)
+-- [[ DÖNGÜLER ]] --
+
+local TracerLines = {}
 RunService.RenderStepped:Connect(function()
     -- FOV
     AimFOVCircle.Visible = getgenv().Settings.Aimbot
+    AimFOVCircle.Radius = getgenv().Settings.AimFOV
     AimFOVCircle.Position = UserInputService:GetMouseLocation()
 
-    -- Visuals Loop
+    -- AIMBOT
+    if getgenv().Settings.Aimbot and UserInputService:IsMouseButtonPressed(getgenv().Settings.AimKey) then
+        local closest, shortest = nil, getgenv().Settings.AimFOV
+        for _, v in pairs(Players:GetPlayers()) do
+            if v ~= LocalPlayer and v.Character and v.Character:FindFirstChild(getgenv().Settings.AimPart) then
+                if getgenv().Settings.ESP_TeamCheck and v.Team == LocalPlayer.Team then continue end
+                local pos, onScreen = Camera:WorldToViewportPoint(v.Character[getgenv().Settings.AimPart].Position)
+                local dist = (Vector2.new(pos.X, pos.Y) - UserInputService:GetMouseLocation()).Magnitude
+                if onScreen and dist < shortest then closest = v.Character[getgenv().Settings.AimPart]; shortest = dist end
+            end
+        end
+        if closest then Camera.CFrame = Camera.CFrame:Lerp(CFrame.new(Camera.CFrame.Position, closest.Position), getgenv().Settings.AimSmoothness) end
+    end
+
+    -- VISUALS LOOP
     for _, v in pairs(Players:GetPlayers()) do
         if v ~= LocalPlayer then
-            -- Tracer Çizgisi Oluştur/Al
-            if not TracerLines[v.Name] then
-                local line = Drawing.new("Line")
-                line.Thickness = 1
-                line.Transparency = 1
-                line.Color = getgenv().Settings.ESP_Color
-                TracerLines[v.Name] = line
-            end
-            
+            if not TracerLines[v.Name] then TracerLines[v.Name] = Drawing.new("Line"); TracerLines[v.Name].Thickness = 1; TracerLines[v.Name].Transparency = 1 end
             local line = TracerLines[v.Name]
             local char = v.Character
             
-            if char and char:FindFirstChild("HumanoidRootPart") and char:FindFirstChild("Humanoid") and char.Humanoid.Health > 0 then
+            if char and char:FindFirstChild("HumanoidRootPart") and char.Humanoid.Health > 0 then
                 local hrp = char.HumanoidRootPart
                 local pos, onScreen = Camera:WorldToViewportPoint(hrp.Position)
                 local isTeammate = (getgenv().Settings.ESP_TeamCheck and v.Team == LocalPlayer.Team)
@@ -263,116 +339,77 @@ RunService.RenderStepped:Connect(function()
                 if not isTeammate then
                     -- TRACERS
                     if getgenv().Settings.ESP_Tracers and onScreen then
-                        line.Visible = true
-                        line.From = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y) -- Ekran altı
-                        line.To = Vector2.new(pos.X, pos.Y)
-                    else
-                        line.Visible = false
-                    end
-
-                    -- BOX ESP
+                        line.Visible = true; line.From = Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y); line.To = Vector2.new(pos.X, pos.Y); line.Color = getgenv().Settings.ESP_Color
+                    else line.Visible = false end
+                    -- BOX
                     if getgenv().Settings.ESP_Box then
-                        local hl = char:FindFirstChild("RoGG_Box") or Instance.new("Highlight", char)
-                        hl.Name = "RoGG_Box"
-                        hl.FillTransparency = 1
-                        hl.OutlineColor = getgenv().Settings.ESP_Color
-                    else
-                        if char:FindFirstChild("RoGG_Box") then char.RoGG_Box:Destroy() end
-                    end
-
-                    -- NAME ESP
+                        local hl = char:FindFirstChild("RoGG_Box") or Instance.new("Highlight", char); hl.Name = "RoGG_Box"; hl.FillTransparency = 1; hl.OutlineColor = getgenv().Settings.ESP_Color
+                    elseif char:FindFirstChild("RoGG_Box") then char.RoGG_Box:Destroy() end
+                    -- NAME
                     if getgenv().Settings.ESP_Name then
-                        local bg = char:FindFirstChild("RoGG_Name") or Instance.new("BillboardGui", char)
-                        bg.Name = "RoGG_Name"
-                        bg.Adornee = char:FindFirstChild("Head")
-                        bg.Size = UDim2.new(0, 100, 0, 50)
-                        bg.StudsOffset = Vector3.new(0, 2, 0)
-                        bg.AlwaysOnTop = true
-                        
-                        local txt = bg:FindFirstChild("Txt") or Instance.new("TextLabel", bg)
-                        txt.Name = "Txt"
-                        txt.Size = UDim2.new(1,0,1,0)
-                        txt.BackgroundTransparency = 1
-                        txt.Text = v.Name .. " [" .. math.floor((LocalPlayer.Character.HumanoidRootPart.Position - hrp.Position).Magnitude) .. "m]"
-                        txt.TextColor3 = getgenv().Settings.ESP_Color
-                        txt.TextStrokeTransparency = 0
-                    else
-                        if char:FindFirstChild("RoGG_Name") then char.RoGG_Name:Destroy() end
-                    end
+                        local bg = char:FindFirstChild("RoGG_Info") or Instance.new("BillboardGui", char); bg.Name = "RoGG_Info"; bg.Adornee = char:FindFirstChild("Head"); bg.Size = UDim2.new(0,100,0,50); bg.StudsOffset = Vector3.new(0,2,0); bg.AlwaysOnTop = true
+                        local txt = bg:FindFirstChild("Txt") or Instance.new("TextLabel", bg); txt.Name = "Txt"; txt.Size = UDim2.new(1,0,1,0); txt.BackgroundTransparency = 1; txt.TextColor3 = getgenv().Settings.ESP_Color; txt.TextStrokeTransparency = 0
+                        local info = v.Name
+                        if getgenv().Settings.ESP_Distance then info = info .. "\n[" .. math.floor((LocalPlayer.Character.HumanoidRootPart.Position - hrp.Position).Magnitude) .. "m]" end
+                        txt.Text = info
+                    elseif char:FindFirstChild("RoGG_Info") then char.RoGG_Info:Destroy() end
                 else
-                    -- Takım arkadaşıysa gizle
-                    line.Visible = false
-                    if char:FindFirstChild("RoGG_Box") then char.RoGG_Box:Destroy() end
-                    if char:FindFirstChild("RoGG_Name") then char.RoGG_Name:Destroy() end
+                    line.Visible = false; if char:FindFirstChild("RoGG_Box") then char.RoGG_Box:Destroy() end; if char:FindFirstChild("RoGG_Info") then char.RoGG_Info:Destroy() end
                 end
-            else
-                line.Visible = false
-            end
-        else
-             -- Oyuncu çıktıysa sil
-            if TracerLines[v.Name] then TracerLines[v.Name]:Remove(); TracerLines[v.Name] = nil end
+            else line.Visible = false end
+        else if TracerLines[v.Name] then TracerLines[v.Name]:Remove(); TracerLines[v.Name] = nil end end
+    end
+end)
+
+-- MOVEMENT LOOPS
+RunService.Stepped:Connect(function()
+    if getgenv().Settings.Noclip and LocalPlayer.Character then
+        for _, p in pairs(LocalPlayer.Character:GetDescendants()) do if p:IsA("BasePart") and p.CanCollide then p.CanCollide = false end end
+    end
+end)
+
+local FlyBV = nil
+RunService.RenderStepped:Connect(function()
+    if getgenv().Settings.Fly and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+        local hrp = LocalPlayer.Character.HumanoidRootPart
+        if not FlyBV then FlyBV = Instance.new("BodyVelocity", hrp); FlyBV.MaxForce = Vector3.new(math.huge,math.huge,math.huge) end
+        local move = Vector3.new(0,0,0)
+        if UserInputService:IsKeyDown(Enum.KeyCode.W) then move = move + Camera.CFrame.LookVector end
+        if UserInputService:IsKeyDown(Enum.KeyCode.S) then move = move - Camera.CFrame.LookVector end
+        if UserInputService:IsKeyDown(Enum.KeyCode.D) then move = move + Camera.CFrame.RightVector end
+        if UserInputService:IsKeyDown(Enum.KeyCode.A) then move = move - Camera.CFrame.RightVector end
+        if UserInputService:IsKeyDown(Enum.KeyCode.Space) then move = move + Vector3.new(0,1,0) end
+        if UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) then move = move - Vector3.new(0,1,0) end
+        FlyBV.Velocity = move * getgenv().Settings.FlySpeed
+    else
+        if FlyBV then FlyBV:Destroy(); FlyBV = nil end
+    end
+end)
+
+UserInputService.JumpRequest:Connect(function()
+    if getgenv().Settings.InfJump and LocalPlayer.Character then LocalPlayer.Character:FindFirstChildOfClass("Humanoid"):ChangeState("Jumping") end
+end)
+
+-- WALK/JUMP LOOP
+task.spawn(function()
+    while task.wait(0.5) do
+        if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
+            LocalPlayer.Character.Humanoid.WalkSpeed = getgenv().Settings.WalkSpeed
+            if LocalPlayer.Character.Humanoid.UseJumpPower then LocalPlayer.Character.Humanoid.JumpPower = getgenv().Settings.JumpPower end
         end
     end
-
-    -- AIMBOT
-    if getgenv().Settings.Aimbot and UserInputService:IsMouseButtonPressed(getgenv().Settings.AimKey) then
-        local closest = nil
-        local shortestDist = getgenv().Settings.AimFOV
-        local mousePos = UserInputService:GetMouseLocation()
-
-        for _, v in pairs(Players:GetPlayers()) do
-            if v ~= LocalPlayer and v.Character and v.Character:FindFirstChild(getgenv().Settings.AimPart) then
-                if getgenv().Settings.ESP_TeamCheck and v.Team == LocalPlayer.Team then continue end
-                local pos, onScreen = Camera:WorldToViewportPoint(v.Character[getgenv().Settings.AimPart].Position)
-                if onScreen then
-                    local dist = (Vector2.new(pos.X, pos.Y) - mousePos).Magnitude
-                    if dist < shortestDist then
-                        shortestDist = dist
-                        closest = v.Character[getgenv().Settings.AimPart]
-                    end
-                end
-            end
-        end
-        if closest then
-             local targetPos = CFrame.new(Camera.CFrame.Position, closest.Position)
-             Camera.CFrame = Camera.CFrame:Lerp(targetPos, getgenv().Settings.AimSmoothness)
-        end
-    end
 end)
 
--- Oyuncu çıkınca tracer temizle
-Players.PlayerRemoving:Connect(function(plr)
-    if TracerLines[plr.Name] then
-        TracerLines[plr.Name]:Remove()
-        TracerLines[plr.Name] = nil
-    end
-end)
-
--- Sürükleme (Drag)
-local Dragging, DragInput, DragStart, StartPos
-TopBar.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 then
-        Dragging = true; DragStart = input.Position; StartPos = Main.Position
-    end
-end)
-TopBar.InputChanged:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseMovement then DragInput = input end
-end)
-UserInputService.InputChanged:Connect(function(input)
-    if input == DragInput and Dragging then
-        local Delta = input.Position - DragStart
-        Main.Position = UDim2.new(StartPos.X.Scale, StartPos.X.Offset + Delta.X, StartPos.Y.Scale, StartPos.Y.Offset + Delta.Y)
-    end
-end)
-UserInputService.InputEnded:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 then Dragging = false end
-end)
-
--- Toggle Menu
+-- MENU TOGGLE
 UserInputService.InputBegan:Connect(function(input)
-    if input.KeyCode == getgenv().Settings.MenuKey then
-        Main.Visible = not Main.Visible
-    end
+    if input.KeyCode == getgenv().Settings.MenuKey then Main.Visible = not Main.Visible end
 end)
 
-SendNotif("RoGG Hub Fixed Loaded!", true)
+-- DRAGGABLE
+local Dragging, DragInput, DragStart, StartPos
+TopBar.InputBegan:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseButton1 then Dragging = true; DragStart = input.Position; StartPos = Main.Position end end)
+TopBar.InputChanged:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseMovement then DragInput = input end end)
+UserInputService.InputChanged:Connect(function(input) if input == DragInput and Dragging then local Delta = input.Position - DragStart; Main.Position = UDim2.new(StartPos.X.Scale, StartPos.X.Offset + Delta.X, StartPos.Y.Scale, StartPos.Y.Offset + Delta.Y) end end)
+UserInputService.InputEnded:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseButton1 then Dragging = false end end)
+
+SendNotif("RoGG Hub v0.3 Ultimate Loaded!", true)
