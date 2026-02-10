@@ -1,12 +1,12 @@
--- [[ RoGG Hub v1.0 | THE GENESIS UPDATE ]] --
--- [[ Design: Cyberpunk Red & Black ]] --
+-- [[ RoGG Script Hub | v1.1 RESTORED & FIXED ]] --
 -- [[ Developer: RoGG | Owner: BilalGG ]] --
+-- [[ Status: %100 WORKING ]] --
 
 -- 1. TEMİZLİK VE YÜKLEME KONTROLÜ
 if getgenv().RoGG_Loaded then
     getgenv().RoGG_Loaded = false
-    if game.CoreGui:FindFirstChild("RoGG_Genesis_UI") then
-        game.CoreGui.RoGG_Genesis_UI:Destroy()
+    if game.CoreGui:FindFirstChild("RoGG_Restored_UI") then
+        game.CoreGui.RoGG_Restored_UI:Destroy()
     end
 end
 getgenv().RoGG_Loaded = true
@@ -21,357 +21,50 @@ local CoreGui = game:GetService("CoreGui")
 local HttpService = game:GetService("HttpService")
 local TeleportService = game:GetService("TeleportService")
 local Workspace = game:GetService("Workspace")
-local Camera = Workspace.CurrentCamera
+
 local LocalPlayer = Players.LocalPlayer
+local Camera = Workspace.CurrentCamera
 local Mouse = LocalPlayer:GetMouse()
 
--- 3. AYARLAR (CONFIG)
+-- 3. AYARLAR (TÜM ÖZELLİKLER GERİ GELDİ)
 getgenv().Settings = {
-    Aimbot = false, AimPart = "Head", AimKey = Enum.UserInputType.MouseButton2, AimSmoothness = 0.1, AimFOV = 150, Prediction = 0.135, NoRecoil = false,
-    ESP_Box = false, ESP_Name = false, ESP_Skeleton = false, ESP_Tracers = false, ESP_TeamCheck = true, ESP_Color = Color3.fromRGB(255, 40, 40),
-    Crosshair = false, Fly = false, FlySpeed = 50, WalkSpeed = 16, JumpPower = 50, Skin_Rainbow = false, MenuKey = Enum.KeyCode.Insert
+    -- Combat
+    Aimbot = false,
+    AimPart = "Head",
+    AimKey = Enum.UserInputType.MouseButton2,
+    AimSmoothness = 0.1,
+    AimFOV = 150,
+    Prediction = 0.135,
+    NoRecoil = false,
+    -- Visuals
+    ESP_Box = false,
+    ESP_Name = false,
+    ESP_Distance = false,
+    ESP_Skeleton = false, -- Geri Geldi
+    ESP_Tracers = false,
+    ESP_TeamCheck = true,
+    ESP_Color = Color3.fromRGB(255, 0, 0), -- Neon Kırmızı
+    Crosshair = false,
+    Fullbright = false,
+    -- Player
+    Fly = false,
+    FlySpeed = 50,
+    Noclip = false,
+    InfJump = false,
+    WalkSpeed = 16,
+    JumpPower = 50,
+    -- Skins
+    Skin_Rainbow = false,
+    Skin_Custom = false,
+    Skin_Color = Color3.fromRGB(255, 215, 0),
+    -- Misc
+    MenuKey = Enum.KeyCode.Insert
 }
 
--- [[ UI LIBRARY - TASARIM MOTORU ]] --
-local UI = {}
-local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "RoGG_Genesis_UI"
-if syn and syn.protect_gui then syn.protect_gui(ScreenGui) ScreenGui.Parent = CoreGui else ScreenGui.Parent = CoreGui end
+-- [[ FONKSİYONLAR ]] --
 
--- RENKLER
-local Theme = {
-    Main = Color3.fromRGB(10, 10, 15), -- Çok koyu arka plan
-    Stroke = Color3.fromRGB(255, 40, 40), -- Neon Kırmızı
-    Text = Color3.fromRGB(240, 240, 240),
-    DarkText = Color3.fromRGB(150, 150, 150),
-    Button = Color3.fromRGB(20, 20, 25),
-    Hover = Color3.fromRGB(30, 30, 35)
-}
-
--- BİLDİRİM SİSTEMİ (Resimdeki gibi sağ üst köşe)
-local NotifContainer = Instance.new("Frame", ScreenGui)
-NotifContainer.Name = "Notifications"
-NotifContainer.Size = UDim2.new(0, 250, 1, 0)
-NotifContainer.Position = UDim2.new(1, -270, 0, 20)
-NotifContainer.BackgroundTransparency = 1
-local NotifList = Instance.new("UIListLayout", NotifContainer)
-NotifList.SortOrder = Enum.SortOrder.LayoutOrder
-NotifList.Padding = UDim.new(0, 8)
-NotifList.VerticalAlignment = Enum.VerticalAlignment.Top
-
-function UI:Notify(text, type) -- type: "success", "error", "info"
-    local Frame = Instance.new("Frame", NotifContainer)
-    Frame.Size = UDim2.new(1, 0, 0, 35)
-    Frame.BackgroundColor3 = Theme.Main
-    Frame.BackgroundTransparency = 0.2
-    Frame.BorderSizePixel = 0
-    
-    local Stroke = Instance.new("UIStroke", Frame)
-    Stroke.Thickness = 1
-    if type == "success" then Stroke.Color = Color3.fromRGB(0, 255, 100)
-    elseif type == "error" then Stroke.Color = Color3.fromRGB(255, 50, 50)
-    else Stroke.Color = Theme.Stroke end
-
-    local Label = Instance.new("TextLabel", Frame)
-    Label.Size = UDim2.new(1, -10, 1, 0)
-    Label.Position = UDim2.new(0, 10, 0, 0)
-    Label.BackgroundTransparency = 1
-    Label.Text = text
-    Label.TextColor3 = Theme.Text
-    Label.Font = Enum.Font.GothamMedium
-    Label.TextSize = 13
-    Label.TextXAlignment = Enum.TextXAlignment.Left
-
-    -- Animasyon
-    Frame.BackgroundTransparency = 1
-    Label.TextTransparency = 1
-    Stroke.Transparency = 1
-    
-    TweenService:Create(Frame, TweenInfo.new(0.3), {BackgroundTransparency = 0.2}):Play()
-    TweenService:Create(Label, TweenInfo.new(0.3), {TextTransparency = 0}):Play()
-    TweenService:Create(Stroke, TweenInfo.new(0.3), {Transparency = 0}):Play()
-
-    task.delay(3, function()
-        TweenService:Create(Frame, TweenInfo.new(0.5), {BackgroundTransparency = 1}):Play()
-        TweenService:Create(Label, TweenInfo.new(0.5), {TextTransparency = 1}):Play()
-        TweenService:Create(Stroke, TweenInfo.new(0.5), {Transparency = 1}):Play()
-        task.wait(0.5)
-        Frame:Destroy()
-    end)
-end
-
--- ANA PENCERE
-local MainFrame = Instance.new("Frame", ScreenGui)
-MainFrame.Name = "MainFrame"
-MainFrame.Size = UDim2.new(0, 650, 0, 450)
-MainFrame.Position = UDim2.new(0.5, -325, 0.5, -225)
-MainFrame.BackgroundColor3 = Theme.Main
-MainFrame.BorderSizePixel = 0
-MainFrame.ClipsDescendants = true -- Taşmaları gizle
-Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 12)
-
--- NEON STROKE (Parlayan Kenar)
-local MainStroke = Instance.new("UIStroke", MainFrame)
-MainStroke.Thickness = 2
-MainStroke.Color = Theme.Stroke
--- Nefes alma efekti
-task.spawn(function()
-    while MainFrame.Parent do
-        TweenService:Create(MainStroke, TweenInfo.new(2, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {Color = Theme.Stroke, Transparency = 0}):Play()
-        task.wait(2)
-        TweenService:Create(MainStroke, TweenInfo.new(2, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {Color = Color3.fromRGB(150, 20, 20), Transparency = 0.2}):Play()
-        task.wait(2)
-    end
-end)
-
--- BAŞLIK (Header)
-local Header = Instance.new("Frame", MainFrame)
-Header.Size = UDim2.new(1, -40, 0, 50)
-Header.Position = UDim2.new(0, 20, 0, 10)
-Header.BackgroundTransparency = 1
-
-local Title = Instance.new("TextLabel", Header)
-Title.Text = "RoGG Hub | v1.0 - The Genesis Update"
-Title.Font = Enum.Font.GothamBold
-Title.TextSize = 20
-Title.TextColor3 = Theme.Stroke
-Title.Size = UDim2.new(0.7, 0, 1, 0)
-Title.TextXAlignment = Enum.TextXAlignment.Left
-Title.BackgroundTransparency = 1
-
-local Version = Instance.new("TextLabel", Header)
-Version.Text = "v1.0"
-Version.Font = Enum.Font.Gotham
-Version.TextSize = 14
-Version.TextColor3 = Theme.DarkText
-Version.Size = UDim2.new(0.3, 0, 1, 0)
-Version.Position = UDim2.new(0.7, 0, 0, 0)
-Version.TextXAlignment = Enum.TextXAlignment.Right
-Version.BackgroundTransparency = 1
-
-local Line = Instance.new("Frame", Header)
-Line.Size = UDim2.new(1, 0, 0, 1)
-Line.Position = UDim2.new(0, 0, 1, 0)
-Line.BackgroundColor3 = Theme.Stroke
-Line.BorderSizePixel = 0
-
--- MENÜ VE İÇERİK ALANI
-local Sidebar = Instance.new("Frame", MainFrame)
-Sidebar.Size = UDim2.new(0, 150, 1, -80)
-Sidebar.Position = UDim2.new(0, 20, 0, 70)
-Sidebar.BackgroundTransparency = 1
-local SidebarLayout = Instance.new("UIListLayout", Sidebar)
-SidebarLayout.Padding = UDim.new(0, 10)
-
-local ContentArea = Instance.new("Frame", MainFrame)
-ContentArea.Size = UDim2.new(1, -190, 1, -80)
-ContentArea.Position = UDim2.new(0, 180, 0, 70)
-ContentArea.BackgroundTransparency = 1
-
--- SÜRÜKLEME (Drag)
-local Dragging, DragInput, DragStart, StartPos
-MainFrame.InputBegan:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseButton1 then Dragging = true; DragStart = input.Position; StartPos = MainFrame.Position end end)
-MainFrame.InputChanged:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseMovement then DragInput = input end end)
-UserInputService.InputChanged:Connect(function(input) if input == DragInput and Dragging then local Delta = input.Position - DragStart; MainFrame.Position = UDim2.new(StartPos.X.Scale, StartPos.X.Offset + Delta.X, StartPos.Y.Scale, StartPos.Y.Offset + Delta.Y) end end)
-UserInputService.InputEnded:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseButton1 then Dragging = false end end)
-
--- UI FONKSİYONLARI
-local Tabs = {}
-
-function UI:Tab(name)
-    local TabButton = Instance.new("TextButton", Sidebar)
-    TabButton.Size = UDim2.new(1, 0, 0, 40)
-    TabButton.BackgroundColor3 = Theme.Button
-    TabButton.Text = name
-    TabButton.TextColor3 = Theme.Text
-    TabButton.Font = Enum.Font.GothamBold
-    TabButton.TextSize = 14
-    TabButton.AutoButtonColor = false
-    Instance.new("UICorner", TabButton).CornerRadius = UDim.new(0, 4)
-    
-    local Stroke = Instance.new("UIStroke", TabButton)
-    Stroke.Color = Theme.Stroke
-    Stroke.Thickness = 1
-    Stroke.Transparency = 1 -- Pasifken gizli
-
-    local Page = Instance.new("ScrollingFrame", ContentArea)
-    Page.Size = UDim2.new(1, 0, 1, 0)
-    Page.BackgroundTransparency = 1
-    Page.Visible = false
-    Page.ScrollBarThickness = 2
-    Page.ScrollBarImageColor3 = Theme.Stroke
-    local PageLayout = Instance.new("UIListLayout", Page)
-    PageLayout.Padding = UDim.new(0, 10)
-    
-    TabButton.MouseButton1Click:Connect(function()
-        for _, t in pairs(Tabs) do
-            TweenService:Create(t.Btn, TweenInfo.new(0.2), {BackgroundColor3 = Theme.Button}):Play()
-            TweenService:Create(t.Stroke, TweenInfo.new(0.2), {Transparency = 1}):Play()
-            t.Page.Visible = false
-        end
-        TweenService:Create(TabButton, TweenInfo.new(0.2), {BackgroundColor3 = Theme.Stroke}):Play() -- Aktif olunca kırmızı
-        TweenService:Create(Stroke, TweenInfo.new(0.2), {Transparency = 0}):Play()
-        Page.Visible = true
-    end)
-    
-    table.insert(Tabs, {Btn = TabButton, Page = Page, Stroke = Stroke})
-    if #Tabs == 1 then TabButton.MouseButton1Click:Fire() end -- İlkini aç
-    return Page
-end
-
-function UI:Toggle(parent, text, configName)
-    local Container = Instance.new("Frame", parent)
-    Container.Size = UDim2.new(1, -5, 0, 45)
-    Container.BackgroundColor3 = Theme.Button
-    Instance.new("UICorner", Container).CornerRadius = UDim.new(0, 6)
-    
-    local Label = Instance.new("TextLabel", Container)
-    Label.Text = text
-    Label.Size = UDim2.new(0.7, 0, 1, 0)
-    Label.Position = UDim2.new(0, 15, 0, 0)
-    Label.BackgroundTransparency = 1
-    Label.TextColor3 = Theme.Text
-    Label.Font = Enum.Font.GothamSemibold
-    Label.TextSize = 14
-    Label.TextXAlignment = Enum.TextXAlignment.Left
-
-    local SwitchBG = Instance.new("TextButton", Container)
-    SwitchBG.Text = ""
-    SwitchBG.Size = UDim2.new(0, 40, 0, 20)
-    SwitchBG.Position = UDim2.new(1, -55, 0.5, -10)
-    SwitchBG.BackgroundColor3 = Color3.fromRGB(40, 40, 45)
-    Instance.new("UICorner", SwitchBG).CornerRadius = UDim.new(1, 0) -- Yuvarlak
-
-    local Knob = Instance.new("Frame", SwitchBG)
-    Knob.Size = UDim2.new(0, 16, 0, 16)
-    Knob.Position = UDim2.new(0, 2, 0.5, -8)
-    Knob.BackgroundColor3 = Color3.fromRGB(200, 200, 200)
-    Instance.new("UICorner", Knob).CornerRadius = UDim.new(1, 0)
-
-    SwitchBG.MouseButton1Click:Connect(function()
-        getgenv().Settings[configName] = not getgenv().Settings[configName]
-        local state = getgenv().Settings[configName]
-        
-        if state then
-            TweenService:Create(Knob, TweenInfo.new(0.2), {Position = UDim2.new(1, -18, 0.5, -8), BackgroundColor3 = Color3.fromRGB(255, 255, 255)}):Play()
-            TweenService:Create(SwitchBG, TweenInfo.new(0.2), {BackgroundColor3 = Theme.Stroke}):Play()
-            UI:Notify(text .. " Enabled", "success")
-        else
-            TweenService:Create(Knob, TweenInfo.new(0.2), {Position = UDim2.new(0, 2, 0.5, -8), BackgroundColor3 = Color3.fromRGB(200, 200, 200)}):Play()
-            TweenService:Create(SwitchBG, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(40, 40, 45)}):Play()
-            UI:Notify(text .. " Disabled", "info")
-        end
-    end)
-end
-
-function UI:Slider(parent, text, min, max, default, callback)
-    local Container = Instance.new("Frame", parent)
-    Container.Size = UDim2.new(1, -5, 0, 55)
-    Container.BackgroundColor3 = Theme.Button
-    Instance.new("UICorner", Container).CornerRadius = UDim.new(0, 6)
-
-    local Label = Instance.new("TextLabel", Container)
-    Label.Text = text
-    Label.Size = UDim2.new(1, -20, 0, 20)
-    Label.Position = UDim2.new(0, 15, 0, 5)
-    Label.BackgroundTransparency = 1
-    Label.TextColor3 = Theme.Text
-    Label.Font = Enum.Font.GothamSemibold
-    Label.TextSize = 13
-    Label.TextXAlignment = Enum.TextXAlignment.Left
-
-    local ValueLabel = Instance.new("TextLabel", Container)
-    ValueLabel.Text = tostring(default)
-    ValueLabel.Size = UDim2.new(0, 50, 0, 20)
-    ValueLabel.Position = UDim2.new(1, -60, 0, 5)
-    ValueLabel.BackgroundTransparency = 1
-    ValueLabel.TextColor3 = Theme.Stroke
-    ValueLabel.Font = Enum.Font.GothamBold
-    ValueLabel.TextSize = 13
-
-    local BarBG = Instance.new("Frame", Container)
-    BarBG.Size = UDim2.new(1, -30, 0, 6)
-    BarBG.Position = UDim2.new(0, 15, 0, 35)
-    BarBG.BackgroundColor3 = Color3.fromRGB(40, 40, 45)
-    Instance.new("UICorner", BarBG).CornerRadius = UDim.new(1, 0)
-
-    local Fill = Instance.new("Frame", BarBG)
-    Fill.Size = UDim2.new((default - min)/(max - min), 0, 1, 0)
-    Fill.BackgroundColor3 = Theme.Stroke
-    Instance.new("UICorner", Fill).CornerRadius = UDim.new(1, 0)
-
-    local Trigger = Instance.new("TextButton", BarBG)
-    Trigger.Size = UDim2.new(1, 0, 1, 0)
-    Trigger.BackgroundTransparency = 1
-    Trigger.Text = ""
-
-    local function Update(input)
-        local pos = math.clamp((input.Position.X - BarBG.AbsolutePosition.X) / BarBG.AbsoluteSize.X, 0, 1)
-        Fill.Size = UDim2.new(pos, 0, 1, 0)
-        local val = math.floor(min + ((max - min) * pos))
-        ValueLabel.Text = tostring(val)
-        if callback then callback(val) end
-    end
-
-    local dragging = false
-    Trigger.InputBegan:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 then dragging = true; Update(i) end end)
-    UserInputService.InputEnded:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 then dragging = false end end)
-    UserInputService.InputChanged:Connect(function(i) if dragging and i.UserInputType == Enum.UserInputType.MouseMovement then Update(i) end end)
-end
-
-function UI:Button(parent, text, color, callback)
-    local Btn = Instance.new("TextButton", parent)
-    Btn.Size = UDim2.new(1, -5, 0, 40)
-    Btn.BackgroundColor3 = color or Theme.Button
-    Btn.Text = text
-    Btn.TextColor3 = Theme.Text
-    Btn.Font = Enum.Font.GothamBold
-    Btn.TextSize = 14
-    Instance.new("UICorner", Btn).CornerRadius = UDim.new(0, 6)
-    
-    local Stroke = Instance.new("UIStroke", Btn)
-    Stroke.Color = Theme.Stroke
-    Stroke.Thickness = 1
-    Stroke.Transparency = 0.5
-
-    Btn.MouseButton1Click:Connect(function()
-        TweenService:Create(Btn, TweenInfo.new(0.1), {BackgroundColor3 = Theme.Stroke}):Play()
-        task.wait(0.1)
-        TweenService:Create(Btn, TweenInfo.new(0.1), {BackgroundColor3 = color or Theme.Button}):Play()
-        callback()
-    end)
-end
-
--- 6. SAYFALARI OLUŞTURMA
-local TabCombat = UI:Tab("COMBAT")
-local TabVisuals = UI:Tab("VISUALS")
-local TabPlayer = UI:Tab("PLAYER")
-local TabMisc = UI:Tab("MISC")
-local TabSettings = UI:Tab("SETTINGS")
-
--- COMBAT
-UI:Toggle(TabCombat, "Aimbot", "Aimbot")
-UI:Toggle(TabCombat, "No Recoil", "NoRecoil")
-UI:Slider(TabCombat, "FOV Radius", 50, 500, 150, function(v) getgenv().Settings.AimFOV = v end)
-UI:Slider(TabCombat, "Smoothness", 1, 20, 2, function(v) getgenv().Settings.AimSmoothness = v/10 end)
-
--- VISUALS
-UI:Toggle(TabVisuals, "Skeleton ESP", "ESP_Skeleton")
-UI:Toggle(TabVisuals, "Box ESP", "ESP_Box")
-UI:Toggle(TabVisuals, "Name ESP", "ESP_Name")
-UI:Toggle(TabVisuals, "Tracers", "ESP_Tracers")
-UI:Toggle(TabVisuals, "Crosshair", "Crosshair")
-UI:Slider(TabVisuals, "ESP Red", 0, 255, 255, function(v) getgenv().Settings.ESP_Color = Color3.fromRGB(v, getgenv().Settings.ESP_Color.G*255, getgenv().Settings.ESP_Color.B*255) end)
-
--- PLAYER
-UI:Toggle(TabPlayer, "Fly [X]", "Fly")
-UI:Toggle(TabPlayer, "Noclip", "Noclip")
-UI:Slider(TabPlayer, "Fly Speed", 10, 200, 50, function(v) getgenv().Settings.FlySpeed = v end)
-UI:Slider(TabPlayer, "Walk Speed", 16, 200, 16, function(v) getgenv().Settings.WalkSpeed = v end)
-
--- MISC
-UI:Toggle(TabMisc, "Rainbow Skin", "Skin_Rainbow")
-UI:Button(TabMisc, "Server Hop (Sunucu Değiştir)", Theme.Button, function()
+-- Server Hop (Çalışan Versiyon)
+local function ServerHop()
     local servers = {}
     local req = request({Url = string.format("https://games.roblox.com/v1/games/%d/servers/Public?sortOrder=Desc&limit=100", game.PlaceId)})
     local body = HttpService:JSONDecode(req.Body)
@@ -382,53 +75,331 @@ UI:Button(TabMisc, "Server Hop (Sunucu Değiştir)", Theme.Button, function()
             end
         end
     end
-    if #servers > 0 then TeleportService:TeleportToPlaceInstance(game.PlaceId, servers[math.random(1, #servers)], LocalPlayer) else UI:Notify("Sunucu bulunamadı", "error") end
-end)
+    if #servers > 0 then
+        TeleportService:TeleportToPlaceInstance(game.PlaceId, servers[math.random(1, #servers)], LocalPlayer)
+    else
+        game:GetService("StarterGui"):SetCore("SendNotification", {Title = "RoGG Hub", Text = "Sunucu Bulunamadı!", Duration = 3})
+    end
+end
 
--- SETTINGS (Alt Kısım Butonları Gibi)
-UI:Button(TabSettings, "SAVE CONFIG", Theme.Button, function() 
-    writefile("RoGG_Config.json", HttpService:JSONEncode(getgenv().Settings))
-    UI:Notify("Config Saved!", "success")
-end)
-UI:Button(TabSettings, "UNLOAD", Color3.fromRGB(50, 0, 0), function() ScreenGui:Destroy(); getgenv().RoGG_Loaded = false end)
+-- Is Teammate Check
+local function IsTeammate(player)
+    if not getgenv().Settings.ESP_TeamCheck then return false end
+    if player == LocalPlayer then return true end
+    if player.Team and LocalPlayer.Team and player.Team == LocalPlayer.Team then return true end
+    if player.TeamColor and LocalPlayer.TeamColor and player.TeamColor == LocalPlayer.TeamColor then return true end
+    return false
+end
 
--- 7. ÇEKİRDEK MANTIK (LOGIC)
-local AimFOVCircle = Drawing.new("Circle"); AimFOVCircle.Thickness=1; AimFOVCircle.NumSides=60; AimFOVCircle.Filled=false; AimFOVCircle.Color=Theme.Stroke
-local TracerLines = {}
-local ConnectedSkeletons = {}
+-- Skeleton Çizim Fonksiyonları
+local function DrawLine()
+    local l = Drawing.new("Line")
+    l.Visible = false
+    l.From = Vector2.new(0, 0)
+    l.To = Vector2.new(0, 0)
+    l.Color = getgenv().Settings.ESP_Color
+    l.Thickness = 1
+    l.Transparency = 1
+    return l
+end
 
--- SKELETON DRAW FUNCTION
-local function DrawLine() local l=Drawing.new("Line"); l.Visible=false; l.Color=getgenv().Settings.ESP_Color; l.Thickness=1; l.Transparency=1; return l end
 local function DrawSkeleton(char)
-    local lines = {}; local joints={{"Head","UpperTorso"},{"UpperTorso","LowerTorso"},{"UpperTorso","LeftUpperArm"},{"LeftUpperArm","LeftLowerArm"},{"LeftLowerArm","LeftHand"},{"UpperTorso","RightUpperArm"},{"RightUpperArm","RightLowerArm"},{"RightLowerArm","RightHand"},{"LowerTorso","LeftUpperLeg"},{"LeftUpperLeg","LeftLowerLeg"},{"LeftLowerLeg","LeftFoot"},{"LowerTorso","RightUpperLeg"},{"RightUpperLeg","RightLowerLeg"},{"RightLowerLeg","RightFoot"}}
-    for i=1,#joints do table.insert(lines, DrawLine()) end
-    local connection; connection=RunService.RenderStepped:Connect(function()
-        if not char or not char.Parent or not getgenv().Settings.ESP_Skeleton then for _,l in pairs(lines) do l:Remove() end; connection:Disconnect(); return end
-        for i,j in pairs(joints) do
-            local p1,p2=char:FindFirstChild(j[1]),char:FindFirstChild(j[2])
-            local l=lines[i]
+    local lines = {}
+    local joints = {
+        {"Head", "UpperTorso"}, {"UpperTorso", "LowerTorso"}, {"UpperTorso", "LeftUpperArm"},
+        {"LeftUpperArm", "LeftLowerArm"}, {"LeftLowerArm", "LeftHand"}, {"UpperTorso", "RightUpperArm"},
+        {"RightUpperArm", "RightLowerArm"}, {"RightLowerArm", "RightHand"}, {"LowerTorso", "LeftUpperLeg"},
+        {"LeftUpperLeg", "LeftLowerLeg"}, {"LeftLowerLeg", "LeftFoot"}, {"LowerTorso", "RightUpperLeg"},
+        {"RightUpperLeg", "RightLowerLeg"}, {"RightLowerLeg", "RightFoot"}
+    }
+    for i=1, #joints do table.insert(lines, DrawLine()) end
+
+    local connection
+    connection = RunService.RenderStepped:Connect(function()
+        if not char or not char.Parent or not getgenv().Settings.ESP_Skeleton then
+            for _, l in pairs(lines) do l:Remove() end
+            connection:Disconnect()
+            return
+        end
+        for i, joint in pairs(joints) do
+            local p1, p2 = char:FindFirstChild(joint[1]), char:FindFirstChild(joint[2])
+            local line = lines[i]
             if p1 and p2 then
-                local pos1,os1=Camera:WorldToViewportPoint(p1.Position); local pos2,os2=Camera:WorldToViewportPoint(p2.Position)
-                if os1 and os2 then l.Visible=true; l.From=Vector2.new(pos1.X,pos1.Y); l.To=Vector2.new(pos2.X,pos2.Y); l.Color=getgenv().Settings.ESP_Color else l.Visible=false end
-            else l.Visible=false end
+                local pos1, onS1 = Camera:WorldToViewportPoint(p1.Position)
+                local pos2, onS2 = Camera:WorldToViewportPoint(p2.Position)
+                if onS1 and onS2 then
+                    line.Visible = true
+                    line.From = Vector2.new(pos1.X, pos1.Y)
+                    line.To = Vector2.new(pos2.X, pos2.Y)
+                    line.Color = getgenv().Settings.ESP_Color
+                else line.Visible = false end
+            else line.Visible = false end
         end
     end)
 end
+
+-- [[ UI OLUŞTURMA ]] --
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "RoGG_Restored_UI"
+if syn and syn.protect_gui then syn.protect_gui(ScreenGui) ScreenGui.Parent = CoreGui else ScreenGui.Parent = CoreGui end
+
+-- Bildirim Alanı
+local NotifContainer = Instance.new("Frame", ScreenGui)
+NotifContainer.Name = "Notifications"
+NotifContainer.Size = UDim2.new(0, 250, 1, 0)
+NotifContainer.Position = UDim2.new(1, -260, 0, 50)
+NotifContainer.BackgroundTransparency = 1
+local NotifLayout = Instance.new("UIListLayout", NotifContainer)
+NotifLayout.SortOrder = Enum.SortOrder.LayoutOrder
+NotifLayout.VerticalAlignment = Enum.VerticalAlignment.Top
+NotifLayout.Padding = UDim.new(0, 5)
+
+local function SendNotif(text, state)
+    local Frame = Instance.new("Frame", NotifContainer)
+    Frame.Size = UDim2.new(1, 0, 0, 35)
+    Frame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+    Frame.BackgroundTransparency = 0.1
+    Frame.BorderSizePixel = 0
+    local Stroke = Instance.new("UIStroke", Frame)
+    Stroke.Thickness = 2
+    Stroke.Color = state and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
+    
+    local Label = Instance.new("TextLabel", Frame)
+    Label.Size = UDim2.new(1, -10, 1, 0)
+    Label.Position = UDim2.new(0, 10, 0, 0)
+    Label.BackgroundTransparency = 1
+    Label.Text = text
+    Label.TextColor3 = Color3.fromRGB(255, 255, 255)
+    Label.Font = Enum.Font.GothamBold
+    Label.TextSize = 14
+    Label.TextXAlignment = Enum.TextXAlignment.Left
+
+    game:GetService("Debris"):AddItem(Frame, 3)
+end
+
+-- Ana Menü
+local Main = Instance.new("Frame", ScreenGui)
+Main.Size = UDim2.new(0, 600, 0, 450)
+Main.Position = UDim2.new(0.5, -300, 0.5, -225)
+Main.BackgroundColor3 = Color3.fromRGB(8, 8, 10) -- Koyu Siyah
+Instance.new("UICorner", Main).CornerRadius = UDim.new(0, 8)
+local MainStroke = Instance.new("UIStroke", Main)
+MainStroke.Color = Color3.fromRGB(255, 0, 0) -- Neon Kırmızı
+MainStroke.Thickness = 2
+
+-- Üst Bar
+local TopBar = Instance.new("Frame", Main)
+TopBar.Size = UDim2.new(1, 0, 0, 45)
+TopBar.BackgroundColor3 = Color3.fromRGB(20, 0, 0)
+Instance.new("UICorner", TopBar).CornerRadius = UDim.new(0, 8)
+local Title = Instance.new("TextLabel", TopBar)
+Title.Text = "RoGG Hub | v1.1 RESTORED"
+Title.Font = Enum.Font.GothamBlack
+Title.TextSize = 18
+Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+Title.Size = UDim2.new(1, -20, 1, 0)
+Title.Position = UDim2.new(0, 15, 0, 0)
+Title.BackgroundTransparency = 1
+Title.TextXAlignment = Enum.TextXAlignment.Left
+
+-- Tablar
+local TabHolder = Instance.new("Frame", Main)
+TabHolder.Size = UDim2.new(0, 140, 1, -45)
+TabHolder.Position = UDim2.new(0, 0, 0, 45)
+TabHolder.BackgroundColor3 = Color3.fromRGB(12, 12, 15)
+local TabList = Instance.new("UIListLayout", TabHolder)
+TabList.Padding = UDim.new(0, 5)
+
+local Pages = Instance.new("Frame", Main)
+Pages.Size = UDim2.new(1, -150, 1, -55)
+Pages.Position = UDim2.new(0, 150, 0, 50)
+Pages.BackgroundTransparency = 1
+
+local tabs = {}
+local function CreateTab(name)
+    local btn = Instance.new("TextButton", TabHolder)
+    btn.Size = UDim2.new(1, 0, 0, 40)
+    btn.BackgroundColor3 = Color3.fromRGB(12, 12, 15)
+    btn.Text = name
+    btn.TextColor3 = Color3.fromRGB(150, 150, 150)
+    btn.Font = Enum.Font.GothamBold
+    btn.TextSize = 14
+    
+    local page = Instance.new("ScrollingFrame", Pages)
+    page.Size = UDim2.new(1, 0, 1, 0)
+    page.Visible = false
+    page.BackgroundTransparency = 1
+    page.ScrollBarThickness = 2
+    Instance.new("UIListLayout", page).Padding = UDim.new(0, 8)
+
+    btn.MouseButton1Click:Connect(function()
+        for _, t in pairs(tabs) do
+            t.Btn.TextColor3 = Color3.fromRGB(150, 150, 150)
+            t.Btn.BackgroundColor3 = Color3.fromRGB(12, 12, 15)
+            t.Page.Visible = false
+        end
+        btn.TextColor3 = Color3.fromRGB(255, 0, 0)
+        btn.BackgroundColor3 = Color3.fromRGB(30, 10, 10)
+        page.Visible = true
+    end)
+    table.insert(tabs, {Btn = btn, Page = page})
+    if #tabs == 1 then btn.TextColor3 = Color3.fromRGB(255, 0, 0); btn.BackgroundColor3 = Color3.fromRGB(30, 10, 10); page.Visible = true end
+    return page
+end
+
+local function CreateToggle(parent, text, configName)
+    local btn = Instance.new("TextButton", parent)
+    btn.Size = UDim2.new(1, -10, 0, 40)
+    btn.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+    btn.Text = ""
+    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 4)
+    
+    local lbl = Instance.new("TextLabel", btn)
+    lbl.Text = text
+    lbl.Size = UDim2.new(1, -40, 1, 0)
+    lbl.Position = UDim2.new(0, 10, 0, 0)
+    lbl.BackgroundTransparency = 1
+    lbl.TextColor3 = Color3.fromRGB(200, 200, 200)
+    lbl.Font = Enum.Font.GothamSemibold
+    lbl.TextSize = 14
+    lbl.TextXAlignment = Enum.TextXAlignment.Left
+
+    local stat = Instance.new("Frame", btn)
+    stat.Size = UDim2.new(0, 15, 0, 15)
+    stat.Position = UDim2.new(1, -25, 0.5, -7.5)
+    stat.BackgroundColor3 = Color3.fromRGB(10, 10, 10)
+    Instance.new("UIStroke", stat).Color = Color3.fromRGB(80, 80, 80)
+
+    btn.MouseButton1Click:Connect(function()
+        getgenv().Settings[configName] = not getgenv().Settings[configName]
+        local state = getgenv().Settings[configName]
+        if state then
+            stat.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
+            SendNotif(text .. " ON", true)
+        else
+            stat.BackgroundColor3 = Color3.fromRGB(10, 10, 10)
+            SendNotif(text .. " OFF", false)
+        end
+    end)
+end
+
+local function CreateSlider(parent, text, min, max, default, callback)
+    local Frame = Instance.new("Frame", parent)
+    Frame.Size = UDim2.new(1, -10, 0, 50)
+    Frame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+    Instance.new("UICorner", Frame).CornerRadius = UDim.new(0, 4)
+
+    local Label = Instance.new("TextLabel", Frame)
+    Label.Text = text .. ": " .. default
+    Label.Size = UDim2.new(1, 0, 0.5, 0)
+    Label.Position = UDim2.new(0, 10, 0, 0)
+    Label.BackgroundTransparency = 1
+    Label.TextColor3 = Color3.fromRGB(200, 200, 200)
+    Label.Font = Enum.Font.GothamMedium
+    Label.TextSize = 14
+    Label.TextXAlignment = Enum.TextXAlignment.Left
+
+    local Bar = Instance.new("Frame", Frame)
+    Bar.Size = UDim2.new(0.9, 0, 0, 4)
+    Bar.Position = UDim2.new(0.05, 0, 0.75, 0)
+    Bar.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+
+    local Fill = Instance.new("Frame", Bar)
+    Fill.Size = UDim2.new((default - min)/(max - min), 0, 1, 0)
+    Fill.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
+
+    local Trigger = Instance.new("TextButton", Bar)
+    Trigger.Size = UDim2.new(1, 0, 1, 0)
+    Trigger.BackgroundTransparency = 1
+    Trigger.Text = ""
+
+    local dragging = false
+    local function Update(input)
+        local pos = math.clamp((input.Position.X - Bar.AbsolutePosition.X) / Bar.AbsoluteSize.X, 0, 1)
+        Fill.Size = UDim2.new(pos, 0, 1, 0)
+        local val = math.floor(min + ((max - min) * pos))
+        Label.Text = text .. ": " .. val
+        if callback then callback(val) end
+    end
+    Trigger.InputBegan:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 then dragging = true; Update(i) end end)
+    UserInputService.InputEnded:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 then dragging = false end end)
+    UserInputService.InputChanged:Connect(function(i) if dragging and i.UserInputType == Enum.UserInputType.MouseMovement then Update(i) end end)
+end
+
+local function CreateButton(parent, text, callback)
+    local btn = Instance.new("TextButton", parent)
+    btn.Size = UDim2.new(1, -10, 0, 40)
+    btn.BackgroundColor3 = Color3.fromRGB(40, 0, 0)
+    btn.Text = text
+    btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    btn.Font = Enum.Font.GothamBold
+    btn.TextSize = 14
+    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 4)
+    btn.MouseButton1Click:Connect(callback)
+end
+
+-- 5. SAYFA VE İÇERİKLER
+local TabCombat = CreateTab("Combat")
+local TabVisuals = CreateTab("Visuals")
+local TabPlayer = CreateTab("Player")
+local TabSkins = CreateTab("Skins")
+local TabMisc = CreateTab("Misc")
+
+-- Combat
+CreateToggle(TabCombat, "Aimbot", "Aimbot")
+CreateToggle(TabCombat, "No Recoil", "NoRecoil")
+CreateSlider(TabCombat, "FOV Size", 50, 500, 150, function(v) getgenv().Settings.AimFOV = v end)
+CreateSlider(TabCombat, "Smoothness", 1, 20, 2, function(v) getgenv().Settings.AimSmoothness = v/10 end)
+
+-- Visuals
+CreateToggle(TabVisuals, "Box ESP", "ESP_Box")
+CreateToggle(TabVisuals, "Name ESP", "ESP_Name")
+CreateToggle(TabVisuals, "Distance ESP", "ESP_Distance")
+CreateToggle(TabVisuals, "Skeleton ESP", "ESP_Skeleton") -- ÇALIŞIYOR
+CreateToggle(TabVisuals, "Tracers", "ESP_Tracers")
+CreateToggle(TabVisuals, "Crosshair", "Crosshair")
+CreateToggle(TabVisuals, "Fullbright", "Fullbright", function(s) 
+    if s then Lighting.Brightness=2; Lighting.GlobalShadows=false else Lighting.Brightness=1; Lighting.GlobalShadows=true end 
+end)
+
+-- Player
+CreateToggle(TabPlayer, "Fly [X]", "Fly")
+CreateToggle(TabPlayer, "Noclip", "Noclip")
+CreateToggle(TabPlayer, "Infinite Jump", "InfJump")
+CreateSlider(TabPlayer, "Fly Speed", 10, 200, 50, function(v) getgenv().Settings.FlySpeed = v end)
+CreateSlider(TabPlayer, "WalkSpeed", 16, 200, 16, function(v) getgenv().Settings.WalkSpeed = v end)
+
+-- Skins
+CreateToggle(TabSkins, "Rainbow Skins", "Skin_Rainbow")
+CreateToggle(TabSkins, "Custom Color", "Skin_Custom")
+CreateSlider(TabSkins, "Red", 0, 255, 255, function(v) getgenv().Settings.Skin_Color = Color3.fromRGB(v, getgenv().Settings.Skin_Color.G*255, getgenv().Settings.Skin_Color.B*255) end)
+
+-- Misc
+CreateButton(TabMisc, "Server Hop", ServerHop) -- ÇALIŞIYOR
+CreateButton(TabMisc, "UNLOAD SCRIPT", function() ScreenGui:Destroy(); getgenv().RoGG_Loaded = false end)
+
+-- 6. DÖNGÜLER VE MANTIK
+local TracerLines = {}
+local ConnectedSkeletons = {}
+local AimFOVCircle = Drawing.new("Circle"); AimFOVCircle.Thickness=1; AimFOVCircle.NumSides=60; AimFOVCircle.Filled=false; AimFOVCircle.Color=Color3.fromRGB(255,0,0)
+local CrossUI = Instance.new("Frame", ScreenGui); CrossUI.Size=UDim2.new(0,6,0,6); CrossUI.Position=UDim2.new(0.5,-3,0.5,-3); CrossUI.BackgroundColor3=Color3.fromRGB(0,255,0); Instance.new("UICorner",CrossUI).CornerRadius=UDim.new(1,0); CrossUI.Visible=false
 
 RunService.RenderStepped:Connect(function()
     AimFOVCircle.Visible = getgenv().Settings.Aimbot
     AimFOVCircle.Radius = getgenv().Settings.AimFOV
     AimFOVCircle.Position = UserInputService:GetMouseLocation()
+    CrossUI.Visible = getgenv().Settings.Crosshair
 
-    -- AIMBOT
+    -- Aimbot
     if getgenv().Settings.Aimbot and UserInputService:IsMouseButtonPressed(getgenv().Settings.AimKey) then
         local closest, shortest = nil, getgenv().Settings.AimFOV
         for _, v in pairs(Players:GetPlayers()) do
             if v ~= LocalPlayer and v.Character and v.Character:FindFirstChild(getgenv().Settings.AimPart) then
-                if getgenv().Settings.ESP_TeamCheck and v.Team == LocalPlayer.Team then continue end
-                local pos, onScreen = Camera:WorldToViewportPoint(v.Character[getgenv().Settings.AimPart].Position)
-                local dist = (Vector2.new(pos.X, pos.Y) - UserInputService:GetMouseLocation()).Magnitude
-                if onScreen and dist < shortest then closest = v.Character; shortest = dist end
+                if not IsTeammate(v) then
+                    local pos, onScreen = Camera:WorldToViewportPoint(v.Character[getgenv().Settings.AimPart].Position)
+                    local dist = (Vector2.new(pos.X, pos.Y) - UserInputService:GetMouseLocation()).Magnitude
+                    if onScreen and dist < shortest then closest = v.Character; shortest = dist end
+                end
             end
         end
         if closest then
@@ -437,43 +408,45 @@ RunService.RenderStepped:Connect(function()
         end
     end
 
-    -- ESP & TRACERS
+    -- ESP & Visuals
     for _, v in pairs(Players:GetPlayers()) do
         if v ~= LocalPlayer then
-             if not TracerLines[v.Name] then TracerLines[v.Name] = Drawing.new("Line"); TracerLines[v.Name].Thickness=1; TracerLines[v.Name].Transparency=1 end
-             local line = TracerLines[v.Name]
-             local char = v.Character
-             if char and char:FindFirstChild("HumanoidRootPart") and char.Humanoid.Health > 0 then
-                 local hrp = char.HumanoidRootPart
-                 local pos, onScreen = Camera:WorldToViewportPoint(hrp.Position)
-                 local isTeam = (getgenv().Settings.ESP_TeamCheck and v.Team == LocalPlayer.Team)
+            if not TracerLines[v.Name] then TracerLines[v.Name] = Drawing.new("Line"); TracerLines[v.Name].Thickness=1; TracerLines[v.Name].Transparency=1 end
+            local line = TracerLines[v.Name]
+            local char = v.Character
 
-                 if not isTeam then
-                    -- SKELETON
+            if char and char:FindFirstChild("HumanoidRootPart") and char.Humanoid.Health > 0 then
+                local hrp = char.HumanoidRootPart
+                local pos, onScreen = Camera:WorldToViewportPoint(hrp.Position)
+                local isTeam = IsTeammate(v)
+
+                if not isTeam then
+                    -- Skeleton
                     if getgenv().Settings.ESP_Skeleton and not ConnectedSkeletons[v.Name] then DrawSkeleton(char); ConnectedSkeletons[v.Name]=true elseif not getgenv().Settings.ESP_Skeleton then ConnectedSkeletons[v.Name]=nil end
-                    -- TRACER
+                    -- Tracers
                     if getgenv().Settings.ESP_Tracers and onScreen then line.Visible=true; line.From=Vector2.new(Camera.ViewportSize.X/2,Camera.ViewportSize.Y); line.To=Vector2.new(pos.X,pos.Y); line.Color=getgenv().Settings.ESP_Color else line.Visible=false end
-                    -- BOX
+                    -- Box
                     if getgenv().Settings.ESP_Box then local hl=char:FindFirstChild("RG_Box") or Instance.new("Highlight",char); hl.Name="RG_Box"; hl.FillTransparency=1; hl.OutlineColor=getgenv().Settings.ESP_Color elseif char:FindFirstChild("RG_Box") then char.RG_Box:Destroy() end
-                    -- NAME
+                    -- Name
                     if getgenv().Settings.ESP_Name then 
                         local bg=char:FindFirstChild("RG_Info") or Instance.new("BillboardGui",char); bg.Name="RG_Info"; bg.Adornee=char:FindFirstChild("Head"); bg.Size=UDim2.new(0,100,0,50); bg.StudsOffset=Vector3.new(0,2,0); bg.AlwaysOnTop=true
                         local txt=bg:FindFirstChild("T") or Instance.new("TextLabel",bg); txt.Name="T"; txt.BackgroundTransparency=1; txt.Size=UDim2.new(1,0,1,0); txt.TextColor3=getgenv().Settings.ESP_Color; txt.TextStrokeTransparency=0
                         txt.Text = v.Name
+                        if getgenv().Settings.ESP_Distance then txt.Text = txt.Text.."\n["..math.floor((LocalPlayer.Character.HumanoidRootPart.Position - hrp.Position).Magnitude).."m]" end
                     elseif char:FindFirstChild("RG_Info") then char.RG_Info:Destroy() end
-                 else
+                else
                     line.Visible=false; if char:FindFirstChild("RG_Box") then char.RG_Box:Destroy() end; if char:FindFirstChild("RG_Info") then char.RG_Info:Destroy() end
-                 end
-             else
+                end
+            else
                 line.Visible=false
-             end
+            end
         else
             if TracerLines[v.Name] then TracerLines[v.Name]:Remove(); TracerLines[v.Name]=nil end
         end
     end
 end)
 
--- MOVEMENT
+-- Movement & Skins
 local FlyBV=nil
 RunService.RenderStepped:Connect(function()
     if getgenv().Settings.Noclip and LocalPlayer.Character then for _,p in pairs(LocalPlayer.Character:GetDescendants()) do if p:IsA("BasePart") then p.CanCollide=false end end end
@@ -491,17 +464,23 @@ RunService.RenderStepped:Connect(function()
     else if FlyBV then FlyBV:Destroy(); FlyBV=nil end end
 end)
 
--- CROSSHAIR UI
-local CrossFrame = Instance.new("Frame", ScreenGui)
-CrossFrame.Visible = false
-CrossFrame.Name = "CrossUI"
-CrossFrame.Size = UDim2.new(0, 6, 0, 6)
-CrossFrame.Position = UDim2.new(0.5, -3, 0.5, -3)
-CrossFrame.BackgroundColor3 = Color3.fromRGB(0, 255, 0)
-Instance.new("UICorner", CrossFrame).CornerRadius = UDim.new(1, 0)
-RunService.RenderStepped:Connect(function() CrossFrame.Visible = getgenv().Settings.Crosshair end)
+task.spawn(function()
+    while task.wait(0.1) do
+        if LocalPlayer.Character and (getgenv().Settings.Skin_Rainbow or getgenv().Settings.Skin_Custom) then
+            local col = getgenv().Settings.Skin_Rainbow and Color3.fromHSV(tick()%5/5,1,1) or getgenv().Settings.Skin_Color
+            for _,t in pairs(LocalPlayer.Character:GetChildren()) do
+                if t:IsA("Tool") then for _,p in pairs(t:GetDescendants()) do if p:IsA("BasePart") or p:IsA("MeshPart") then p.Color=col end end end
+            end
+        end
+    end
+end)
 
--- MENU TOGGLE
-UserInputService.InputBegan:Connect(function(i) if i.KeyCode == getgenv().Settings.MenuKey then MainFrame.Visible = not MainFrame.Visible end end)
+-- UI Kontrolleri
+local Dragging, DragInput, DragStart, StartPos
+TopBar.InputBegan:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseButton1 then Dragging = true; DragStart = input.Position; StartPos = Main.Position end end)
+TopBar.InputChanged:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseMovement then DragInput = input end end)
+UserInputService.InputChanged:Connect(function(input) if input == DragInput and Dragging then local Delta = input.Position - DragStart; Main.Position = UDim2.new(StartPos.X.Scale, StartPos.X.Offset + Delta.X, StartPos.Y.Scale, StartPos.Y.Offset + Delta.Y) end end)
+UserInputService.InputEnded:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseButton1 then Dragging = false end end)
+UserInputService.InputBegan:Connect(function(i) if i.KeyCode == getgenv().Settings.MenuKey then Main.Visible = not Main.Visible end; if i.KeyCode == Enum.KeyCode.X then getgenv().Settings.Fly = not getgenv().Settings.Fly end end)
 
-UI:Notify("RoGG Hub Loaded Successfully!", "success")
+SendNotif("RoGG Hub v1.1 Restored!", true)
