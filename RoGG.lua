@@ -1,12 +1,11 @@
--- [[ RoGG Script Hub v0.3 | ULTIMATE EDITION ]] --
+-- [[ RoGG Script Hub v0.4 | SKIN & FIX EDITION ]] --
 -- [[ Developer: RoGG | Owner: BilalGG ]] --
--- [[ Features: Combat, Visuals, Movement, Utility ]] --
+-- [[ Features: Skin Changer, Fixed Team Check ]] --
 
--- Tekrar çalışmayı önleme
 if getgenv().RoGG_Loaded then 
     game:GetService("StarterGui"):SetCore("SendNotification", {
         Title = "RoGG Hub",
-        Text = "Script zaten aktif! Menü için: INSERT",
+        Text = "Script zaten aktif! Menü: INSERT",
         Duration = 3
     })
     return 
@@ -44,6 +43,10 @@ getgenv().Settings = {
     ESP_Color = Color3.fromRGB(0, 170, 255),
     Crosshair = false,
     Fullbright = false,
+    -- Skins (YENİ)
+    Skin_Rainbow = false,
+    Skin_Custom = false,
+    Skin_Color = Color3.fromRGB(255, 215, 0), -- Altın Sarısı
     -- Movement
     Fly = false,
     FlySpeed = 50,
@@ -55,9 +58,27 @@ getgenv().Settings = {
     MenuKey = Enum.KeyCode.Insert
 }
 
+-- YARDIMCI FONKSİYON: GELİŞMİŞ TEAM CHECK
+local function IsTeammate(player)
+    if not getgenv().Settings.ESP_TeamCheck then return false end
+    if player == LocalPlayer then return true end
+    
+    -- Yöntem 1: Takım Objeleri
+    if player.Team and LocalPlayer.Team then
+        if player.Team == LocalPlayer.Team then return true end
+    end
+    
+    -- Yöntem 2: Takım Renkleri (Bazı oyunlar bunu kullanır)
+    if player.TeamColor and LocalPlayer.TeamColor then
+        if player.TeamColor == LocalPlayer.TeamColor then return true end
+    end
+    
+    return false
+end
+
 -- [[ UI OLUŞTURMA ]] --
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "RoGG_Ultimate"
+ScreenGui.Name = "RoGG_Ultimate_v04"
 if syn and syn.protect_gui then syn.protect_gui(ScreenGui) ScreenGui.Parent = CoreGui else ScreenGui.Parent = CoreGui end
 
 -- BİLDİRİM SİSTEMİ
@@ -113,7 +134,7 @@ TopBar.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
 Instance.new("UICorner", TopBar).CornerRadius = UDim.new(0, 6)
 
 local Title = Instance.new("TextLabel", TopBar)
-Title.Text = "RoGG Hub | v0.3 ULTIMATE"
+Title.Text = "RoGG Hub | v0.4 Skins & Fixes"
 Title.Font = Enum.Font.GothamBlack
 Title.TextSize = 16
 Title.TextColor3 = Color3.fromRGB(0, 170, 255)
@@ -258,31 +279,34 @@ end
 -- TABLAR
 local TabCombat = CreateTab("Combat")
 local TabVisuals = CreateTab("Visuals")
+local TabSkins = CreateTab("Skins") -- YENİ TAB
 local TabMovement = CreateTab("Movement")
 local TabSettings = CreateTab("Settings")
 
 -- COMBAT
 CreateRectToggle(TabCombat, "Aimbot", "Aimbot")
-CreateRectToggle(TabCombat, "No Recoil (Shake)", "NoRecoil")
+CreateRectToggle(TabCombat, "No Recoil", "NoRecoil")
 CreateSlider(TabCombat, "FOV Size", 50, 500, 150, function(val) getgenv().Settings.AimFOV = val end)
 CreateSlider(TabCombat, "Smoothness", 1, 20, 2, function(val) getgenv().Settings.AimSmoothness = val / 10 end)
-local AimFOVCircle = Drawing.new("Circle")
-AimFOVCircle.Color = Color3.fromRGB(0, 170, 255); AimFOVCircle.Thickness = 1; AimFOVCircle.NumSides = 60; AimFOVCircle.Filled = false
 
 -- VISUALS
-CreateRectToggle(TabVisuals, "Kutu ESP (Box)", "ESP_Box")
-CreateRectToggle(TabVisuals, "İsim ESP (Names)", "ESP_Name")
-CreateRectToggle(TabVisuals, "Mesafe (Distance)", "ESP_Distance")
-CreateRectToggle(TabVisuals, "Çizgiler (Tracers)", "ESP_Tracers")
-CreateRectToggle(TabVisuals, "Takım Kontrolü", "ESP_TeamCheck")
+CreateRectToggle(TabVisuals, "Box ESP", "ESP_Box")
+CreateRectToggle(TabVisuals, "Name ESP", "ESP_Name")
+CreateRectToggle(TabVisuals, "Tracers", "ESP_Tracers")
+CreateRectToggle(TabVisuals, "Team Check", "ESP_TeamCheck")
 CreateRectToggle(TabVisuals, "Crosshair", "Crosshair", function(state)
     if state then
         local ch = Instance.new("Frame", ScreenGui); ch.Name = "Crosshair"; ch.Size = UDim2.new(0, 6, 0, 6); ch.Position = UDim2.new(0.5, -3, 0.5, -3); ch.BackgroundColor3 = Color3.fromRGB(0, 255, 0); Instance.new("UICorner", ch).CornerRadius = UDim.new(1,0)
     else if ScreenGui:FindFirstChild("Crosshair") then ScreenGui.Crosshair:Destroy() end end
 end)
-CreateRectToggle(TabVisuals, "Fullbright", "Fullbright", function(state)
-    if state then Lighting.Brightness = 2; Lighting.ClockTime = 14; Lighting.GlobalShadows = false else Lighting.Brightness = 1; Lighting.GlobalShadows = true end
-end)
+
+-- SKINS (YENİ ÖZELLİK)
+CreateRectToggle(TabSkins, "Rainbow Gun (RGB)", "Skin_Rainbow")
+CreateRectToggle(TabSkins, "Custom Color Gun", "Skin_Custom")
+-- Renk Seçici (Basit Sliderlar ile)
+CreateSlider(TabSkins, "Red (R)", 0, 255, 255, function(val) getgenv().Settings.Skin_Color = Color3.fromRGB(val, getgenv().Settings.Skin_Color.G*255, getgenv().Settings.Skin_Color.B*255) end)
+CreateSlider(TabSkins, "Green (G)", 0, 255, 215, function(val) getgenv().Settings.Skin_Color = Color3.fromRGB(getgenv().Settings.Skin_Color.R*255, val, getgenv().Settings.Skin_Color.B*255) end)
+CreateSlider(TabSkins, "Blue (B)", 0, 255, 0, function(val) getgenv().Settings.Skin_Color = Color3.fromRGB(getgenv().Settings.Skin_Color.R*255, getgenv().Settings.Skin_Color.G*255, val) end)
 
 -- MOVEMENT
 CreateRectToggle(TabMovement, "Fly", "Fly")
@@ -290,20 +314,15 @@ CreateRectToggle(TabMovement, "Noclip", "Noclip")
 CreateRectToggle(TabMovement, "Infinite Jump", "InfJump")
 CreateSlider(TabMovement, "Fly Speed", 10, 200, 50, function(val) getgenv().Settings.FlySpeed = val end)
 CreateSlider(TabMovement, "WalkSpeed", 16, 200, 16, function(val) getgenv().Settings.WalkSpeed = val end)
-CreateSlider(TabMovement, "JumpPower", 50, 200, 50, function(val) getgenv().Settings.JumpPower = val end)
 
 -- SETTINGS
-CreateButton(TabSettings, "İzle (Spectate Random)", function()
-    local list = Players:GetPlayers()
-    local target = list[math.random(1, #list)]
-    if target ~= LocalPlayer and target.Character then Camera.CameraSubject = target.Character.Humanoid end
-end)
-CreateButton(TabSettings, "İzlemeyi Bırak", function() Camera.CameraSubject = LocalPlayer.Character.Humanoid end)
-CreateButton(TabSettings, "Hileyi Kapat (UNLOAD)", function() ScreenGui:Destroy(); AimFOVCircle:Remove(); getgenv().RoGG_Loaded = false end)
+CreateButton(TabSettings, "UNLOAD", function() ScreenGui:Destroy(); getgenv().RoGG_Loaded = false end)
 
 -- [[ DÖNGÜLER ]] --
 
 local TracerLines = {}
+local AimFOVCircle = Drawing.new("Circle"); AimFOVCircle.Color = Color3.fromRGB(0, 170, 255); AimFOVCircle.Thickness = 1; AimFOVCircle.NumSides = 60; AimFOVCircle.Filled = false
+
 RunService.RenderStepped:Connect(function()
     -- FOV
     AimFOVCircle.Visible = getgenv().Settings.Aimbot
@@ -315,7 +334,7 @@ RunService.RenderStepped:Connect(function()
         local closest, shortest = nil, getgenv().Settings.AimFOV
         for _, v in pairs(Players:GetPlayers()) do
             if v ~= LocalPlayer and v.Character and v.Character:FindFirstChild(getgenv().Settings.AimPart) then
-                if getgenv().Settings.ESP_TeamCheck and v.Team == LocalPlayer.Team then continue end
+                if IsTeammate(v) then continue end -- DÜZELTİLMİŞ TEAM CHECK
                 local pos, onScreen = Camera:WorldToViewportPoint(v.Character[getgenv().Settings.AimPart].Position)
                 local dist = (Vector2.new(pos.X, pos.Y) - UserInputService:GetMouseLocation()).Magnitude
                 if onScreen and dist < shortest then closest = v.Character[getgenv().Settings.AimPart]; shortest = dist end
@@ -334,7 +353,7 @@ RunService.RenderStepped:Connect(function()
             if char and char:FindFirstChild("HumanoidRootPart") and char.Humanoid.Health > 0 then
                 local hrp = char.HumanoidRootPart
                 local pos, onScreen = Camera:WorldToViewportPoint(hrp.Position)
-                local isTeammate = (getgenv().Settings.ESP_TeamCheck and v.Team == LocalPlayer.Team)
+                local isTeammate = IsTeammate(v) -- DÜZELTİLMİŞ TEAM CHECK
 
                 if not isTeammate then
                     -- TRACERS
@@ -349,9 +368,7 @@ RunService.RenderStepped:Connect(function()
                     if getgenv().Settings.ESP_Name then
                         local bg = char:FindFirstChild("RoGG_Info") or Instance.new("BillboardGui", char); bg.Name = "RoGG_Info"; bg.Adornee = char:FindFirstChild("Head"); bg.Size = UDim2.new(0,100,0,50); bg.StudsOffset = Vector3.new(0,2,0); bg.AlwaysOnTop = true
                         local txt = bg:FindFirstChild("Txt") or Instance.new("TextLabel", bg); txt.Name = "Txt"; txt.Size = UDim2.new(1,0,1,0); txt.BackgroundTransparency = 1; txt.TextColor3 = getgenv().Settings.ESP_Color; txt.TextStrokeTransparency = 0
-                        local info = v.Name
-                        if getgenv().Settings.ESP_Distance then info = info .. "\n[" .. math.floor((LocalPlayer.Character.HumanoidRootPart.Position - hrp.Position).Magnitude) .. "m]" end
-                        txt.Text = info
+                        txt.Text = v.Name .. "\n[" .. math.floor((LocalPlayer.Character.HumanoidRootPart.Position - hrp.Position).Magnitude) .. "m]"
                     elseif char:FindFirstChild("RoGG_Info") then char.RoGG_Info:Destroy() end
                 else
                     line.Visible = false; if char:FindFirstChild("RoGG_Box") then char.RoGG_Box:Destroy() end; if char:FindFirstChild("RoGG_Info") then char.RoGG_Info:Destroy() end
@@ -361,13 +378,36 @@ RunService.RenderStepped:Connect(function()
     end
 end)
 
--- MOVEMENT LOOPS
+-- SKIN CHANGER LOOP
+task.spawn(function()
+    while task.wait(0.1) do
+        if LocalPlayer.Character then
+            -- Rainbow Color Calculation
+            local rainbow = Color3.fromHSV(tick() % 5 / 5, 1, 1)
+            
+            for _, child in pairs(LocalPlayer.Character:GetChildren()) do
+                if child:IsA("Tool") then
+                    for _, part in pairs(child:GetDescendants()) do
+                        if part:IsA("BasePart") or part:IsA("MeshPart") then
+                            if getgenv().Settings.Skin_Rainbow then
+                                part.Color = rainbow
+                            elseif getgenv().Settings.Skin_Custom then
+                                part.Color = getgenv().Settings.Skin_Color
+                            end
+                        end
+                    end
+                end
+            end
+        end
+    end
+end)
+
+-- MOVEMENT
 RunService.Stepped:Connect(function()
     if getgenv().Settings.Noclip and LocalPlayer.Character then
         for _, p in pairs(LocalPlayer.Character:GetDescendants()) do if p:IsA("BasePart") and p.CanCollide then p.CanCollide = false end end
     end
 end)
-
 local FlyBV = nil
 RunService.RenderStepped:Connect(function()
     if getgenv().Settings.Fly and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
@@ -381,35 +421,16 @@ RunService.RenderStepped:Connect(function()
         if UserInputService:IsKeyDown(Enum.KeyCode.Space) then move = move + Vector3.new(0,1,0) end
         if UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) then move = move - Vector3.new(0,1,0) end
         FlyBV.Velocity = move * getgenv().Settings.FlySpeed
-    else
-        if FlyBV then FlyBV:Destroy(); FlyBV = nil end
-    end
+    else if FlyBV then FlyBV:Destroy(); FlyBV = nil end end
 end)
+UserInputService.JumpRequest:Connect(function() if getgenv().Settings.InfJump and LocalPlayer.Character then LocalPlayer.Character:FindFirstChildOfClass("Humanoid"):ChangeState("Jumping") end end)
 
-UserInputService.JumpRequest:Connect(function()
-    if getgenv().Settings.InfJump and LocalPlayer.Character then LocalPlayer.Character:FindFirstChildOfClass("Humanoid"):ChangeState("Jumping") end
-end)
-
--- WALK/JUMP LOOP
-task.spawn(function()
-    while task.wait(0.5) do
-        if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
-            LocalPlayer.Character.Humanoid.WalkSpeed = getgenv().Settings.WalkSpeed
-            if LocalPlayer.Character.Humanoid.UseJumpPower then LocalPlayer.Character.Humanoid.JumpPower = getgenv().Settings.JumpPower end
-        end
-    end
-end)
-
--- MENU TOGGLE
-UserInputService.InputBegan:Connect(function(input)
-    if input.KeyCode == getgenv().Settings.MenuKey then Main.Visible = not Main.Visible end
-end)
-
--- DRAGGABLE
+-- UI DRAG & TOGGLE
 local Dragging, DragInput, DragStart, StartPos
 TopBar.InputBegan:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseButton1 then Dragging = true; DragStart = input.Position; StartPos = Main.Position end end)
 TopBar.InputChanged:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseMovement then DragInput = input end end)
 UserInputService.InputChanged:Connect(function(input) if input == DragInput and Dragging then local Delta = input.Position - DragStart; Main.Position = UDim2.new(StartPos.X.Scale, StartPos.X.Offset + Delta.X, StartPos.Y.Scale, StartPos.Y.Offset + Delta.Y) end end)
 UserInputService.InputEnded:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseButton1 then Dragging = false end end)
+UserInputService.InputBegan:Connect(function(input) if input.KeyCode == getgenv().Settings.MenuKey then Main.Visible = not Main.Visible end end)
 
-SendNotif("RoGG Hub v0.3 Ultimate Loaded!", true)
+SendNotif("RoGG Hub v0.4 Skins & Fixes Loaded!", true)
