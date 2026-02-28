@@ -1,486 +1,850 @@
--- [[ RoGG Script Hub | v1.1 RESTORED & FIXED ]] --
--- [[ Developer: RoGG | Owner: BilalGG ]] --
--- [[ Status: %100 WORKING ]] --
+--[[
+╔═══════════════════════════════════════════════════╗
+║            ADVANCED ESP v2.0                      ║
+║  Sekmeli Menü • FOV • Head Dot • Closest Vurgu   ║
+║          INSERT → Aç/Kapat                        ║
+╚═══════════════════════════════════════════════════╝
+Sadece öğrenme amaçlıdır.
+]]
 
--- 1. TEMİZLİK VE YÜKLEME KONTROLÜ
-if getgenv().RoGG_Loaded then
-    getgenv().RoGG_Loaded = false
-    if game.CoreGui:FindFirstChild("RoGG_Restored_UI") then
-        game.CoreGui.RoGG_Restored_UI:Destroy()
-    end
-end
-getgenv().RoGG_Loaded = true
-
--- 2. SERVİSLER
+-- ══════════════════════════════
+--  SERVİSLER
+-- ══════════════════════════════
+local Players          = game:GetService("Players")
+local RunService       = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
-local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
-local TweenService = game:GetService("TweenService")
-local Lighting = game:GetService("Lighting")
-local CoreGui = game:GetService("CoreGui")
-local HttpService = game:GetService("HttpService")
-local TeleportService = game:GetService("TeleportService")
-local Workspace = game:GetService("Workspace")
+local TweenService     = game:GetService("TweenService")
+local camera           = workspace.CurrentCamera
+local lp               = Players.LocalPlayer
 
-local LocalPlayer = Players.LocalPlayer
-local Camera = Workspace.CurrentCamera
-local Mouse = LocalPlayer:GetMouse()
+-- ══════════════════════════════
+--  CONFIG
+-- ══════════════════════════════
+local CONFIG = {
+    -- Genel
+    enabled       = true,
+    maxDistance   = 500,
 
--- 3. AYARLAR (TÜM ÖZELLİKLER GERİ GELDİ)
-getgenv().Settings = {
-    -- Combat
-    Aimbot = false,
-    AimPart = "Head",
-    AimKey = Enum.UserInputType.MouseButton2,
-    AimSmoothness = 0.1,
-    AimFOV = 150,
-    Prediction = 0.135,
-    NoRecoil = false,
-    -- Visuals
-    ESP_Box = false,
-    ESP_Name = false,
-    ESP_Distance = false,
-    ESP_Skeleton = false, -- Geri Geldi
-    ESP_Tracers = false,
-    ESP_TeamCheck = true,
-    ESP_Color = Color3.fromRGB(255, 0, 0), -- Neon Kırmızı
-    Crosshair = false,
-    Fullbright = false,
-    -- Player
-    Fly = false,
-    FlySpeed = 50,
-    Noclip = false,
-    InfJump = false,
-    WalkSpeed = 16,
-    JumpPower = 50,
-    -- Skins
-    Skin_Rainbow = false,
-    Skin_Custom = false,
-    Skin_Color = Color3.fromRGB(255, 215, 0),
-    -- Misc
-    MenuKey = Enum.KeyCode.Insert
+    -- ESP Özellikleri
+    box           = true,
+    cornerBox     = false,   -- Köşe kutu stili
+    healthBar     = true,
+    names         = true,
+    distance      = true,
+    snapLines     = false,
+    headDot       = true,    -- Kafaya nokta
+    skeleton      = true,
+    chams         = true,
+    teamCheck     = true,
+    showTeammates = false,
+
+    -- Görsel Yardımcılar
+    fovCircle     = true,
+    fovRadius     = 120,     -- FOV çember yarıçapı (piksel)
+    crosshair     = true,
+    closestHighlight = true, -- En yakın düşmanı vurgula
+
+    -- Renkler
+    colorVisible      = Color3.fromRGB(0, 255, 80),
+    colorWall         = Color3.fromRGB(255, 60, 60),
+    colorTeammate     = Color3.fromRGB(60, 140, 255),
+    colorClosest      = Color3.fromRGB(255, 220, 0),
+    colorFOV          = Color3.fromRGB(255, 255, 255),
+    colorCrosshair    = Color3.fromRGB(255, 255, 255),
 }
 
--- [[ FONKSİYONLAR ]] --
+-- ══════════════════════════════════════════════════
+--  MENÜ GUI
+-- ══════════════════════════════════════════════════
+local gui = Instance.new("ScreenGui")
+gui.Name           = "ESP_v2"
+gui.ResetOnSpawn   = false
+gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+pcall(function() gui.Parent = lp:WaitForChild("PlayerGui") end)
 
--- Server Hop (Çalışan Versiyon)
-local function ServerHop()
-    local servers = {}
-    local req = request({Url = string.format("https://games.roblox.com/v1/games/%d/servers/Public?sortOrder=Desc&limit=100", game.PlaceId)})
-    local body = HttpService:JSONDecode(req.Body)
-    if body and body.data then
-        for i, v in next, body.data do
-            if type(v) == "table" and tonumber(v.playing) and tonumber(v.maxPlayers) and v.playing < v.maxPlayers and v.id ~= game.JobId then
-                table.insert(servers, 1, v.id)
-            end
-        end
+-- ── Ana pencere ──
+local win = Instance.new("Frame")
+win.Size              = UDim2.new(0, 260, 0, 380)
+win.Position          = UDim2.new(0, 30, 0, 30)
+win.BackgroundColor3  = Color3.fromRGB(12, 12, 18)
+win.BorderSizePixel   = 0
+win.Active            = true
+win.Draggable         = true
+win.Visible           = false
+win.Parent            = gui
+Instance.new("UICorner", win).CornerRadius = UDim.new(0, 10)
+
+-- Dış parlama efekti
+local glow = Instance.new("UIStroke", win)
+glow.Color     = Color3.fromRGB(0, 200, 100)
+glow.Thickness = 1.5
+
+-- ── Başlık çubuğu ──
+local titleBar = Instance.new("Frame", win)
+titleBar.Size            = UDim2.new(1, 0, 0, 40)
+titleBar.BackgroundColor3 = Color3.fromRGB(8, 8, 14)
+titleBar.BorderSizePixel  = 0
+Instance.new("UICorner", titleBar).CornerRadius = UDim.new(0, 10)
+
+-- Alt köşe düzeltme
+local fix = Instance.new("Frame", titleBar)
+fix.Size             = UDim2.new(1, 0, 0.5, 0)
+fix.Position         = UDim2.new(0, 0, 0.5, 0)
+fix.BackgroundColor3 = Color3.fromRGB(8, 8, 14)
+fix.BorderSizePixel  = 0
+
+-- Yeşil sol çizgi
+local accent = Instance.new("Frame", titleBar)
+accent.Size             = UDim2.new(0, 3, 0.7, 0)
+accent.Position         = UDim2.new(0, 10, 0.15, 0)
+accent.BackgroundColor3 = Color3.fromRGB(0, 220, 100)
+accent.BorderSizePixel  = 0
+Instance.new("UICorner", accent).CornerRadius = UDim.new(1, 0)
+
+local titleTxt = Instance.new("TextLabel", titleBar)
+titleTxt.Size                = UDim2.new(1, -20, 1, 0)
+titleTxt.Position            = UDim2.new(0, 20, 0, 0)
+titleTxt.BackgroundTransparency = 1
+titleTxt.Text                = "⚡  ESP  v2.0"
+titleTxt.TextColor3          = Color3.fromRGB(240, 240, 240)
+titleTxt.TextSize             = 15
+titleTxt.Font                 = Enum.Font.GothamBold
+titleTxt.TextXAlignment       = Enum.TextXAlignment.Left
+
+local subTxt = Instance.new("TextLabel", titleBar)
+subTxt.Size                = UDim2.new(1, -20, 1, 0)
+subTxt.Position            = UDim2.new(0, 20, 0, 0)
+subTxt.BackgroundTransparency = 1
+subTxt.Text                = "INSERT → aç/kapat"
+subTxt.TextColor3          = Color3.fromRGB(80, 80, 100)
+subTxt.TextSize             = 9
+subTxt.Font                 = Enum.Font.Gotham
+subTxt.TextXAlignment       = Enum.TextXAlignment.Right
+
+-- ── Sekme çubuğu ──
+local tabBar = Instance.new("Frame", win)
+tabBar.Size             = UDim2.new(1, -20, 0, 30)
+tabBar.Position         = UDim2.new(0, 10, 0, 46)
+tabBar.BackgroundColor3 = Color3.fromRGB(20, 20, 28)
+tabBar.BorderSizePixel  = 0
+Instance.new("UICorner", tabBar).CornerRadius = UDim.new(0, 6)
+
+local tabLayout = Instance.new("UIListLayout", tabBar)
+tabLayout.FillDirection  = Enum.FillDirection.Horizontal
+tabLayout.SortOrder      = Enum.SortOrder.LayoutOrder
+tabLayout.Padding        = UDim.new(0, 2)
+tabLayout.VerticalAlignment = Enum.VerticalAlignment.Center
+tabLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+
+-- İçerik alanı
+local content = Instance.new("Frame", win)
+content.Size             = UDim2.new(1, -20, 1, -90)
+content.Position         = UDim2.new(0, 10, 0, 84)
+content.BackgroundTransparency = 1
+content.BorderSizePixel  = 0
+content.ClipsDescendants = true
+
+-- ══════════════════════════════════════════════════
+--  YARDIMCI: Sekme ve içerik sistemi
+-- ══════════════════════════════════════════════════
+local tabs        = {}
+local tabPages    = {}
+local activeTab   = nil
+
+local function SetTab(name)
+    for tabName, btn in pairs(tabs) do
+        local isActive = tabName == name
+        TweenService:Create(btn, TweenInfo.new(0.15), {
+            BackgroundColor3 = isActive
+                and Color3.fromRGB(0, 180, 80)
+                or Color3.fromRGB(30, 30, 40),
+            TextColor3 = isActive
+                and Color3.fromRGB(255, 255, 255)
+                or Color3.fromRGB(120, 120, 140),
+        }):Play()
     end
-    if #servers > 0 then
-        TeleportService:TeleportToPlaceInstance(game.PlaceId, servers[math.random(1, #servers)], LocalPlayer)
-    else
-        game:GetService("StarterGui"):SetCore("SendNotification", {Title = "RoGG Hub", Text = "Sunucu Bulunamadı!", Duration = 3})
+    for pageName, page in pairs(tabPages) do
+        page.Visible = pageName == name
     end
+    activeTab = name
 end
 
--- Is Teammate Check
-local function IsTeammate(player)
-    if not getgenv().Settings.ESP_TeamCheck then return false end
-    if player == LocalPlayer then return true end
-    if player.Team and LocalPlayer.Team and player.Team == LocalPlayer.Team then return true end
-    if player.TeamColor and LocalPlayer.TeamColor and player.TeamColor == LocalPlayer.TeamColor then return true end
-    return false
-end
+local function AddTab(name, icon)
+    local btn = Instance.new("TextButton", tabBar)
+    btn.Size             = UDim2.new(0, 76, 0, 26)
+    btn.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
+    btn.BorderSizePixel  = 0
+    btn.Text             = icon .. "  " .. name
+    btn.TextColor3       = Color3.fromRGB(120, 120, 140)
+    btn.TextSize         = 10
+    btn.Font             = Enum.Font.GothamBold
+    btn.AutoButtonColor  = false
+    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 5)
 
--- Skeleton Çizim Fonksiyonları
-local function DrawLine()
-    local l = Drawing.new("Line")
-    l.Visible = false
-    l.From = Vector2.new(0, 0)
-    l.To = Vector2.new(0, 0)
-    l.Color = getgenv().Settings.ESP_Color
-    l.Thickness = 1
-    l.Transparency = 1
-    return l
-end
-
-local function DrawSkeleton(char)
-    local lines = {}
-    local joints = {
-        {"Head", "UpperTorso"}, {"UpperTorso", "LowerTorso"}, {"UpperTorso", "LeftUpperArm"},
-        {"LeftUpperArm", "LeftLowerArm"}, {"LeftLowerArm", "LeftHand"}, {"UpperTorso", "RightUpperArm"},
-        {"RightUpperArm", "RightLowerArm"}, {"RightLowerArm", "RightHand"}, {"LowerTorso", "LeftUpperLeg"},
-        {"LeftUpperLeg", "LeftLowerLeg"}, {"LeftLowerLeg", "LeftFoot"}, {"LowerTorso", "RightUpperLeg"},
-        {"RightUpperLeg", "RightLowerLeg"}, {"RightLowerLeg", "RightFoot"}
-    }
-    for i=1, #joints do table.insert(lines, DrawLine()) end
-
-    local connection
-    connection = RunService.RenderStepped:Connect(function()
-        if not char or not char.Parent or not getgenv().Settings.ESP_Skeleton then
-            for _, l in pairs(lines) do l:Remove() end
-            connection:Disconnect()
-            return
-        end
-        for i, joint in pairs(joints) do
-            local p1, p2 = char:FindFirstChild(joint[1]), char:FindFirstChild(joint[2])
-            local line = lines[i]
-            if p1 and p2 then
-                local pos1, onS1 = Camera:WorldToViewportPoint(p1.Position)
-                local pos2, onS2 = Camera:WorldToViewportPoint(p2.Position)
-                if onS1 and onS2 then
-                    line.Visible = true
-                    line.From = Vector2.new(pos1.X, pos1.Y)
-                    line.To = Vector2.new(pos2.X, pos2.Y)
-                    line.Color = getgenv().Settings.ESP_Color
-                else line.Visible = false end
-            else line.Visible = false end
-        end
-    end)
-end
-
--- [[ UI OLUŞTURMA ]] --
-local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "RoGG_Restored_UI"
-if syn and syn.protect_gui then syn.protect_gui(ScreenGui) ScreenGui.Parent = CoreGui else ScreenGui.Parent = CoreGui end
-
--- Bildirim Alanı
-local NotifContainer = Instance.new("Frame", ScreenGui)
-NotifContainer.Name = "Notifications"
-NotifContainer.Size = UDim2.new(0, 250, 1, 0)
-NotifContainer.Position = UDim2.new(1, -260, 0, 50)
-NotifContainer.BackgroundTransparency = 1
-local NotifLayout = Instance.new("UIListLayout", NotifContainer)
-NotifLayout.SortOrder = Enum.SortOrder.LayoutOrder
-NotifLayout.VerticalAlignment = Enum.VerticalAlignment.Top
-NotifLayout.Padding = UDim.new(0, 5)
-
-local function SendNotif(text, state)
-    local Frame = Instance.new("Frame", NotifContainer)
-    Frame.Size = UDim2.new(1, 0, 0, 35)
-    Frame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
-    Frame.BackgroundTransparency = 0.1
-    Frame.BorderSizePixel = 0
-    local Stroke = Instance.new("UIStroke", Frame)
-    Stroke.Thickness = 2
-    Stroke.Color = state and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
-    
-    local Label = Instance.new("TextLabel", Frame)
-    Label.Size = UDim2.new(1, -10, 1, 0)
-    Label.Position = UDim2.new(0, 10, 0, 0)
-    Label.BackgroundTransparency = 1
-    Label.Text = text
-    Label.TextColor3 = Color3.fromRGB(255, 255, 255)
-    Label.Font = Enum.Font.GothamBold
-    Label.TextSize = 14
-    Label.TextXAlignment = Enum.TextXAlignment.Left
-
-    game:GetService("Debris"):AddItem(Frame, 3)
-end
-
--- Ana Menü
-local Main = Instance.new("Frame", ScreenGui)
-Main.Size = UDim2.new(0, 600, 0, 450)
-Main.Position = UDim2.new(0.5, -300, 0.5, -225)
-Main.BackgroundColor3 = Color3.fromRGB(8, 8, 10) -- Koyu Siyah
-Instance.new("UICorner", Main).CornerRadius = UDim.new(0, 8)
-local MainStroke = Instance.new("UIStroke", Main)
-MainStroke.Color = Color3.fromRGB(255, 0, 0) -- Neon Kırmızı
-MainStroke.Thickness = 2
-
--- Üst Bar
-local TopBar = Instance.new("Frame", Main)
-TopBar.Size = UDim2.new(1, 0, 0, 45)
-TopBar.BackgroundColor3 = Color3.fromRGB(20, 0, 0)
-Instance.new("UICorner", TopBar).CornerRadius = UDim.new(0, 8)
-local Title = Instance.new("TextLabel", TopBar)
-Title.Text = "RoGG Hub | v1.1 RESTORED"
-Title.Font = Enum.Font.GothamBlack
-Title.TextSize = 18
-Title.TextColor3 = Color3.fromRGB(255, 255, 255)
-Title.Size = UDim2.new(1, -20, 1, 0)
-Title.Position = UDim2.new(0, 15, 0, 0)
-Title.BackgroundTransparency = 1
-Title.TextXAlignment = Enum.TextXAlignment.Left
-
--- Tablar
-local TabHolder = Instance.new("Frame", Main)
-TabHolder.Size = UDim2.new(0, 140, 1, -45)
-TabHolder.Position = UDim2.new(0, 0, 0, 45)
-TabHolder.BackgroundColor3 = Color3.fromRGB(12, 12, 15)
-local TabList = Instance.new("UIListLayout", TabHolder)
-TabList.Padding = UDim.new(0, 5)
-
-local Pages = Instance.new("Frame", Main)
-Pages.Size = UDim2.new(1, -150, 1, -55)
-Pages.Position = UDim2.new(0, 150, 0, 50)
-Pages.BackgroundTransparency = 1
-
-local tabs = {}
-local function CreateTab(name)
-    local btn = Instance.new("TextButton", TabHolder)
-    btn.Size = UDim2.new(1, 0, 0, 40)
-    btn.BackgroundColor3 = Color3.fromRGB(12, 12, 15)
-    btn.Text = name
-    btn.TextColor3 = Color3.fromRGB(150, 150, 150)
-    btn.Font = Enum.Font.GothamBold
-    btn.TextSize = 14
-    
-    local page = Instance.new("ScrollingFrame", Pages)
-    page.Size = UDim2.new(1, 0, 1, 0)
-    page.Visible = false
+    local page = Instance.new("ScrollingFrame", content)
+    page.Size             = UDim2.new(1, 0, 1, 0)
     page.BackgroundTransparency = 1
-    page.ScrollBarThickness = 2
-    Instance.new("UIListLayout", page).Padding = UDim.new(0, 8)
+    page.BorderSizePixel  = 0
+    page.ScrollBarThickness = 3
+    page.ScrollBarImageColor3 = Color3.fromRGB(0, 180, 80)
+    page.Visible          = false
+    page.CanvasSize       = UDim2.new(0, 0, 0, 0)
+    page.AutomaticCanvasSize = Enum.AutomaticSize.Y
 
-    btn.MouseButton1Click:Connect(function()
-        for _, t in pairs(tabs) do
-            t.Btn.TextColor3 = Color3.fromRGB(150, 150, 150)
-            t.Btn.BackgroundColor3 = Color3.fromRGB(12, 12, 15)
-            t.Page.Visible = false
-        end
-        btn.TextColor3 = Color3.fromRGB(255, 0, 0)
-        btn.BackgroundColor3 = Color3.fromRGB(30, 10, 10)
-        page.Visible = true
-    end)
-    table.insert(tabs, {Btn = btn, Page = page})
-    if #tabs == 1 then btn.TextColor3 = Color3.fromRGB(255, 0, 0); btn.BackgroundColor3 = Color3.fromRGB(30, 10, 10); page.Visible = true end
+    local layout = Instance.new("UIListLayout", page)
+    layout.SortOrder = Enum.SortOrder.LayoutOrder
+    layout.Padding   = UDim.new(0, 5)
+
+    tabs[name]     = btn
+    tabPages[name] = page
+
+    btn.MouseButton1Click:Connect(function() SetTab(name) end)
     return page
 end
 
-local function CreateToggle(parent, text, configName)
-    local btn = Instance.new("TextButton", parent)
-    btn.Size = UDim2.new(1, -10, 0, 40)
-    btn.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
-    btn.Text = ""
-    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 4)
-    
-    local lbl = Instance.new("TextLabel", btn)
-    lbl.Text = text
-    lbl.Size = UDim2.new(1, -40, 1, 0)
-    lbl.Position = UDim2.new(0, 10, 0, 0)
-    lbl.BackgroundTransparency = 1
-    lbl.TextColor3 = Color3.fromRGB(200, 200, 200)
-    lbl.Font = Enum.Font.GothamSemibold
-    lbl.TextSize = 14
-    lbl.TextXAlignment = Enum.TextXAlignment.Left
+-- ══════════════════════════════════════════════════
+--  YARDIMCI: Toggle
+-- ══════════════════════════════════════════════════
+local function AddToggle(page, label, configKey, order)
+    local row = Instance.new("Frame", page)
+    row.Size             = UDim2.new(1, -4, 0, 32)
+    row.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
+    row.BorderSizePixel  = 0
+    row.LayoutOrder      = order
+    Instance.new("UICorner", row).CornerRadius = UDim.new(0, 6)
 
-    local stat = Instance.new("Frame", btn)
-    stat.Size = UDim2.new(0, 15, 0, 15)
-    stat.Position = UDim2.new(1, -25, 0.5, -7.5)
-    stat.BackgroundColor3 = Color3.fromRGB(10, 10, 10)
-    Instance.new("UIStroke", stat).Color = Color3.fromRGB(80, 80, 80)
+    local lbl = Instance.new("TextLabel", row)
+    lbl.Size                = UDim2.new(1, -50, 1, 0)
+    lbl.Position            = UDim2.new(0, 12, 0, 0)
+    lbl.BackgroundTransparency = 1
+    lbl.Text                = label
+    lbl.TextColor3          = Color3.fromRGB(190, 190, 200)
+    lbl.TextSize             = 12
+    lbl.Font                 = Enum.Font.Gotham
+    lbl.TextXAlignment       = Enum.TextXAlignment.Left
+
+    local switchBG = Instance.new("Frame", row)
+    switchBG.Size             = UDim2.new(0, 38, 0, 20)
+    switchBG.Position         = UDim2.new(1, -46, 0.5, -10)
+    switchBG.BackgroundColor3 = CONFIG[configKey]
+        and Color3.fromRGB(0, 180, 80)
+        or  Color3.fromRGB(50, 50, 70)
+    switchBG.BorderSizePixel  = 0
+    Instance.new("UICorner", switchBG).CornerRadius = UDim.new(1, 0)
+
+    local knob = Instance.new("Frame", switchBG)
+    knob.Size             = UDim2.new(0, 14, 0, 14)
+    knob.Position         = CONFIG[configKey]
+        and UDim2.new(1, -17, 0.5, -7)
+        or  UDim2.new(0, 3,   0.5, -7)
+    knob.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    knob.BorderSizePixel  = 0
+    Instance.new("UICorner", knob).CornerRadius = UDim.new(1, 0)
+
+    local btn = Instance.new("TextButton", row)
+    btn.Size                = UDim2.new(1, 0, 1, 0)
+    btn.BackgroundTransparency = 1
+    btn.Text                = ""
 
     btn.MouseButton1Click:Connect(function()
-        getgenv().Settings[configName] = not getgenv().Settings[configName]
-        local state = getgenv().Settings[configName]
-        if state then
-            stat.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
-            SendNotif(text .. " ON", true)
-        else
-            stat.BackgroundColor3 = Color3.fromRGB(10, 10, 10)
-            SendNotif(text .. " OFF", false)
-        end
+        CONFIG[configKey] = not CONFIG[configKey]
+        local on = CONFIG[configKey]
+        TweenService:Create(switchBG, TweenInfo.new(0.15), {
+            BackgroundColor3 = on
+                and Color3.fromRGB(0, 180, 80)
+                or  Color3.fromRGB(50, 50, 70)
+        }):Play()
+        TweenService:Create(knob, TweenInfo.new(0.15), {
+            Position = on
+                and UDim2.new(1, -17, 0.5, -7)
+                or  UDim2.new(0, 3,   0.5, -7)
+        }):Play()
     end)
 end
 
-local function CreateSlider(parent, text, min, max, default, callback)
-    local Frame = Instance.new("Frame", parent)
-    Frame.Size = UDim2.new(1, -10, 0, 50)
-    Frame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
-    Instance.new("UICorner", Frame).CornerRadius = UDim.new(0, 4)
+-- ══════════════════════════════════════════════════
+--  YARDIMCI: Slider
+-- ══════════════════════════════════════════════════
+local function AddSlider(page, label, configKey, minVal, maxVal, order)
+    local row = Instance.new("Frame", page)
+    row.Size             = UDim2.new(1, -4, 0, 46)
+    row.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
+    row.BorderSizePixel  = 0
+    row.LayoutOrder      = order
+    Instance.new("UICorner", row).CornerRadius = UDim.new(0, 6)
 
-    local Label = Instance.new("TextLabel", Frame)
-    Label.Text = text .. ": " .. default
-    Label.Size = UDim2.new(1, 0, 0.5, 0)
-    Label.Position = UDim2.new(0, 10, 0, 0)
-    Label.BackgroundTransparency = 1
-    Label.TextColor3 = Color3.fromRGB(200, 200, 200)
-    Label.Font = Enum.Font.GothamMedium
-    Label.TextSize = 14
-    Label.TextXAlignment = Enum.TextXAlignment.Left
+    local lbl = Instance.new("TextLabel", row)
+    lbl.Size                = UDim2.new(0.6, 0, 0, 20)
+    lbl.Position            = UDim2.new(0, 12, 0, 6)
+    lbl.BackgroundTransparency = 1
+    lbl.Text                = label
+    lbl.TextColor3          = Color3.fromRGB(190, 190, 200)
+    lbl.TextSize             = 12
+    lbl.Font                 = Enum.Font.Gotham
+    lbl.TextXAlignment       = Enum.TextXAlignment.Left
 
-    local Bar = Instance.new("Frame", Frame)
-    Bar.Size = UDim2.new(0.9, 0, 0, 4)
-    Bar.Position = UDim2.new(0.05, 0, 0.75, 0)
-    Bar.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+    local valLbl = Instance.new("TextLabel", row)
+    valLbl.Size                = UDim2.new(0.4, -12, 0, 20)
+    valLbl.Position            = UDim2.new(0.6, 0, 0, 6)
+    valLbl.BackgroundTransparency = 1
+    valLbl.Text                = tostring(CONFIG[configKey])
+    valLbl.TextColor3          = Color3.fromRGB(0, 200, 90)
+    valLbl.TextSize             = 12
+    valLbl.Font                 = Enum.Font.GothamBold
+    valLbl.TextXAlignment       = Enum.TextXAlignment.Right
 
-    local Fill = Instance.new("Frame", Bar)
-    Fill.Size = UDim2.new((default - min)/(max - min), 0, 1, 0)
-    Fill.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
+    -- Track
+    local track = Instance.new("Frame", row)
+    track.Size             = UDim2.new(1, -24, 0, 4)
+    track.Position         = UDim2.new(0, 12, 0, 33)
+    track.BackgroundColor3 = Color3.fromRGB(40, 40, 55)
+    track.BorderSizePixel  = 0
+    Instance.new("UICorner", track).CornerRadius = UDim.new(1, 0)
 
-    local Trigger = Instance.new("TextButton", Bar)
-    Trigger.Size = UDim2.new(1, 0, 1, 0)
-    Trigger.BackgroundTransparency = 1
-    Trigger.Text = ""
+    -- Fill
+    local frac  = (CONFIG[configKey] - minVal) / (maxVal - minVal)
+    local fill  = Instance.new("Frame", track)
+    fill.Size             = UDim2.new(frac, 0, 1, 0)
+    fill.BackgroundColor3 = Color3.fromRGB(0, 180, 80)
+    fill.BorderSizePixel  = 0
+    Instance.new("UICorner", fill).CornerRadius = UDim.new(1, 0)
 
+    -- Knob
+    local knob = Instance.new("Frame", track)
+    knob.Size             = UDim2.new(0, 12, 0, 12)
+    knob.Position         = UDim2.new(frac, -6, 0.5, -6)
+    knob.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    knob.BorderSizePixel  = 0
+    Instance.new("UICorner", knob).CornerRadius = UDim.new(1, 0)
+
+    -- Sürükleme
     local dragging = false
-    local function Update(input)
-        local pos = math.clamp((input.Position.X - Bar.AbsolutePosition.X) / Bar.AbsoluteSize.X, 0, 1)
-        Fill.Size = UDim2.new(pos, 0, 1, 0)
-        local val = math.floor(min + ((max - min) * pos))
-        Label.Text = text .. ": " .. val
-        if callback then callback(val) end
+    local btn = Instance.new("TextButton", track)
+    btn.Size                = UDim2.new(1, 0, 0, 20)
+    btn.Position            = UDim2.new(0, 0, 0.5, -10)
+    btn.BackgroundTransparency = 1
+    btn.Text                = ""
+
+    local function Update(inputX)
+        local abs  = track.AbsolutePosition.X
+        local wid  = track.AbsoluteSize.X
+        local t    = math.clamp((inputX - abs) / wid, 0, 1)
+        local val  = math.floor(minVal + t * (maxVal - minVal))
+        CONFIG[configKey] = val
+        valLbl.Text        = tostring(val)
+        fill.Size          = UDim2.new(t, 0, 1, 0)
+        knob.Position      = UDim2.new(t, -6, 0.5, -6)
     end
-    Trigger.InputBegan:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 then dragging = true; Update(i) end end)
-    UserInputService.InputEnded:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 then dragging = false end end)
-    UserInputService.InputChanged:Connect(function(i) if dragging and i.UserInputType == Enum.UserInputType.MouseMovement then Update(i) end end)
+
+    btn.MouseButton1Down:Connect(function() dragging = true end)
+    UserInputService.InputEnded:Connect(function(i)
+        if i.UserInputType == Enum.UserInputType.MouseButton1 then
+            dragging = false
+        end
+    end)
+    UserInputService.InputChanged:Connect(function(i)
+        if dragging and i.UserInputType == Enum.UserInputType.MouseMovement then
+            Update(i.Position.X)
+        end
+    end)
+    btn.MouseButton1Click:Connect(function()
+        Update(UserInputService:GetMouseLocation().X)
+    end)
 end
 
-local function CreateButton(parent, text, callback)
-    local btn = Instance.new("TextButton", parent)
-    btn.Size = UDim2.new(1, -10, 0, 40)
-    btn.BackgroundColor3 = Color3.fromRGB(40, 0, 0)
-    btn.Text = text
-    btn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    btn.Font = Enum.Font.GothamBold
-    btn.TextSize = 14
-    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 4)
-    btn.MouseButton1Click:Connect(callback)
-end
+-- ══════════════════════════════════════════════════
+--  SEKMELER + İÇERİKLER
+-- ══════════════════════════════════════════════════
 
--- 5. SAYFA VE İÇERİKLER
-local TabCombat = CreateTab("Combat")
-local TabVisuals = CreateTab("Visuals")
-local TabPlayer = CreateTab("Player")
-local TabSkins = CreateTab("Skins")
-local TabMisc = CreateTab("Misc")
+-- 1) ESP sekmesi
+local espPage = AddTab("ESP", "👁")
+AddToggle(espPage, "📦 Bounding Box",      "box",           1)
+AddToggle(espPage, "🔲 Köşe Kutu Stili",   "cornerBox",     2)
+AddToggle(espPage, "❤️  Can Barı",          "healthBar",     3)
+AddToggle(espPage, "🏷️  İsim",              "names",         4)
+AddToggle(espPage, "📏 Mesafe",             "distance",      5)
+AddToggle(espPage, "📍 Snap Lines",         "snapLines",     6)
+AddToggle(espPage, "🔴 Kafa Noktası",       "headDot",       7)
+AddToggle(espPage, "💀 Skeleton",           "skeleton",      8)
+AddToggle(espPage, "🎨 Chams",              "chams",         9)
+AddSlider(espPage, "Max Mesafe",            "maxDistance",   100, 2000, 10)
 
--- Combat
-CreateToggle(TabCombat, "Aimbot", "Aimbot")
-CreateToggle(TabCombat, "No Recoil", "NoRecoil")
-CreateSlider(TabCombat, "FOV Size", 50, 500, 150, function(v) getgenv().Settings.AimFOV = v end)
-CreateSlider(TabCombat, "Smoothness", 1, 20, 2, function(v) getgenv().Settings.AimSmoothness = v/10 end)
+-- 2) Takım sekmesi
+local teamPage = AddTab("Takım", "👥")
+AddToggle(teamPage, "👥 Team Check",         "teamCheck",     1)
+AddToggle(teamPage, "🟦 Takım Arkadaşları", "showTeammates", 2)
 
--- Visuals
-CreateToggle(TabVisuals, "Box ESP", "ESP_Box")
-CreateToggle(TabVisuals, "Name ESP", "ESP_Name")
-CreateToggle(TabVisuals, "Distance ESP", "ESP_Distance")
-CreateToggle(TabVisuals, "Skeleton ESP", "ESP_Skeleton") -- ÇALIŞIYOR
-CreateToggle(TabVisuals, "Tracers", "ESP_Tracers")
-CreateToggle(TabVisuals, "Crosshair", "Crosshair")
-CreateToggle(TabVisuals, "Fullbright", "Fullbright", function(s) 
-    if s then Lighting.Brightness=2; Lighting.GlobalShadows=false else Lighting.Brightness=1; Lighting.GlobalShadows=true end 
+-- 3) Görsel yardımcılar
+local aimPage = AddTab("Görsel", "🎯")
+AddToggle(aimPage, "⭕ FOV Çemberi",         "fovCircle",        1)
+AddSlider(aimPage, "FOV Yarıçapı",           "fovRadius",    20, 400, 2)
+AddToggle(aimPage, "✚ Crosshair",            "crosshair",        3)
+AddToggle(aimPage, "🌟 En Yakın Vurgu",      "closestHighlight", 4)
+
+-- İlk sekmeyi aç
+SetTab("ESP")
+
+-- ══════════════════════════════════════════════════
+--  INSERT → MENÜ AÇ/KAPAT
+-- ══════════════════════════════════════════════════
+UserInputService.InputBegan:Connect(function(input, gp)
+    if gp then return end
+    if input.KeyCode == Enum.KeyCode.Insert then
+        win.Visible = not win.Visible
+        if win.Visible then
+            win.Size = UDim2.new(0, 0, 0, 0)
+            TweenService:Create(win, TweenInfo.new(0.25, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+                Size = UDim2.new(0, 260, 0, 380)
+            }):Play()
+        end
+    end
 end)
 
--- Player
-CreateToggle(TabPlayer, "Fly [X]", "Fly")
-CreateToggle(TabPlayer, "Noclip", "Noclip")
-CreateToggle(TabPlayer, "Infinite Jump", "InfJump")
-CreateSlider(TabPlayer, "Fly Speed", 10, 200, 50, function(v) getgenv().Settings.FlySpeed = v end)
-CreateSlider(TabPlayer, "WalkSpeed", 16, 200, 16, function(v) getgenv().Settings.WalkSpeed = v end)
+-- ══════════════════════════════════════════════════
+--  GÖRSEL YARDIMCILAR: FOV + CROSSHAIR (Drawing)
+-- ══════════════════════════════════════════════════
 
--- Skins
-CreateToggle(TabSkins, "Rainbow Skins", "Skin_Rainbow")
-CreateToggle(TabSkins, "Custom Color", "Skin_Custom")
-CreateSlider(TabSkins, "Red", 0, 255, 255, function(v) getgenv().Settings.Skin_Color = Color3.fromRGB(v, getgenv().Settings.Skin_Color.G*255, getgenv().Settings.Skin_Color.B*255) end)
+-- FOV Çemberi
+local fovCircle = Drawing.new("Circle")
+fovCircle.Radius      = CONFIG.fovRadius
+fovCircle.Color       = CONFIG.colorFOV
+fovCircle.Thickness   = 1.5
+fovCircle.Filled      = false
+fovCircle.Transparency = 0.7
+fovCircle.Visible     = false
+fovCircle.NumSides    = 64
 
--- Misc
-CreateButton(TabMisc, "Server Hop", ServerHop) -- ÇALIŞIYOR
-CreateButton(TabMisc, "UNLOAD SCRIPT", function() ScreenGui:Destroy(); getgenv().RoGG_Loaded = false end)
-
--- 6. DÖNGÜLER VE MANTIK
-local TracerLines = {}
-local ConnectedSkeletons = {}
-local AimFOVCircle = Drawing.new("Circle"); AimFOVCircle.Thickness=1; AimFOVCircle.NumSides=60; AimFOVCircle.Filled=false; AimFOVCircle.Color=Color3.fromRGB(255,0,0)
-local CrossUI = Instance.new("Frame", ScreenGui); CrossUI.Size=UDim2.new(0,6,0,6); CrossUI.Position=UDim2.new(0.5,-3,0.5,-3); CrossUI.BackgroundColor3=Color3.fromRGB(0,255,0); Instance.new("UICorner",CrossUI).CornerRadius=UDim.new(1,0); CrossUI.Visible=false
+-- Crosshair (4 çizgi)
+local chLines = {
+    Drawing.new("Line"), Drawing.new("Line"),
+    Drawing.new("Line"), Drawing.new("Line"),
+}
+for _, l in ipairs(chLines) do
+    l.Color     = CONFIG.colorCrosshair
+    l.Thickness = 1.5
+    l.Visible   = false
+end
 
 RunService.RenderStepped:Connect(function()
-    AimFOVCircle.Visible = getgenv().Settings.Aimbot
-    AimFOVCircle.Radius = getgenv().Settings.AimFOV
-    AimFOVCircle.Position = UserInputService:GetMouseLocation()
-    CrossUI.Visible = getgenv().Settings.Crosshair
+    local vp     = camera.ViewportSize
+    local cx, cy = vp.X / 2, vp.Y / 2
 
-    -- Aimbot
-    if getgenv().Settings.Aimbot and UserInputService:IsMouseButtonPressed(getgenv().Settings.AimKey) then
-        local closest, shortest = nil, getgenv().Settings.AimFOV
-        for _, v in pairs(Players:GetPlayers()) do
-            if v ~= LocalPlayer and v.Character and v.Character:FindFirstChild(getgenv().Settings.AimPart) then
-                if not IsTeammate(v) then
-                    local pos, onScreen = Camera:WorldToViewportPoint(v.Character[getgenv().Settings.AimPart].Position)
-                    local dist = (Vector2.new(pos.X, pos.Y) - UserInputService:GetMouseLocation()).Magnitude
-                    if onScreen and dist < shortest then closest = v.Character; shortest = dist end
+    -- FOV çemberi
+    fovCircle.Position = Vector2.new(cx, cy)
+    fovCircle.Radius   = CONFIG.fovRadius
+    fovCircle.Visible  = CONFIG.enabled and CONFIG.fovCircle
+
+    -- Crosshair
+    if CONFIG.enabled and CONFIG.crosshair then
+        local g = 6  -- boşluk
+        local s = 14 -- çizgi uzunluğu
+        chLines[1].From = Vector2.new(cx - s - g, cy); chLines[1].To = Vector2.new(cx - g, cy)
+        chLines[2].From = Vector2.new(cx + g, cy);     chLines[2].To = Vector2.new(cx + s + g, cy)
+        chLines[3].From = Vector2.new(cx, cy - s - g); chLines[3].To = Vector2.new(cx, cy - g)
+        chLines[4].From = Vector2.new(cx, cy + g);     chLines[4].To = Vector2.new(cx, cy + s + g)
+        for _, l in ipairs(chLines) do l.Visible = true end
+    else
+        for _, l in ipairs(chLines) do l.Visible = false end
+    end
+end)
+
+-- ══════════════════════════════════════════════════
+--  ESP DRAWING SİSTEMİ
+-- ══════════════════════════════════════════════════
+local drawings = {}
+local chams    = {}
+
+local BONES = {
+    {"Head","UpperTorso"},{"UpperTorso","LowerTorso"},
+    {"UpperTorso","LeftUpperArm"},{"LeftUpperArm","LeftLowerArm"},{"LeftLowerArm","LeftHand"},
+    {"UpperTorso","RightUpperArm"},{"RightUpperArm","RightLowerArm"},{"RightLowerArm","RightHand"},
+    {"LowerTorso","LeftUpperLeg"},{"LeftUpperLeg","LeftLowerLeg"},{"LeftLowerLeg","LeftFoot"},
+    {"LowerTorso","RightUpperLeg"},{"RightUpperLeg","RightLowerLeg"},{"RightLowerLeg","RightFoot"},
+}
+
+local function L(thick)
+    local l = Drawing.new("Line")
+    l.Thickness = thick or 1.5
+    l.Visible = false
+    return l
+end
+local function T(sz)
+    local t = Drawing.new("Text")
+    t.Size = sz or 13; t.Center = true; t.Outline = true
+    t.Font = Drawing.Fonts.UI; t.Visible = false
+    return t
+end
+local function SQ(filled, col, trans)
+    local s = Drawing.new("Square")
+    s.Filled = filled or false
+    s.Color = col or Color3.fromRGB(0,0,0)
+    s.Transparency = trans or 1
+    s.Visible = false
+    return s
+end
+local function CIR(radius)
+    local c = Drawing.new("Circle")
+    c.Radius = radius or 4
+    c.Filled = true
+    c.Visible = false
+    return c
+end
+
+local function CreateDrawings(player)
+    local d = {
+        boxTop=L(), boxBottom=L(), boxLeft=L(), boxRight=L(),
+        -- Köşe kutu
+        c1a=L(2), c1b=L(2), c2a=L(2), c2b=L(2),
+        c3a=L(2), c3b=L(2), c4a=L(2), c4b=L(2),
+        name=T(13), dist=T(11),
+        healthBG=SQ(true,Color3.fromRGB(0,0,0),0.4), healthBar=SQ(true),
+        snapLine=L(1),
+        headDot=CIR(4),
+        skeleton={},
+    }
+    for i = 1, #BONES do d.skeleton[i] = L(1) end
+    drawings[player] = d
+end
+
+local function HideAll(player)
+    local d = drawings[player]
+    if not d then return end
+    for k, v in pairs(d) do
+        if k == "skeleton" then for _, l in ipairs(v) do l.Visible = false end
+        else v.Visible = false end
+    end
+end
+
+local function RemoveAll(player)
+    local d = drawings[player]
+    if not d then return end
+    for k, v in pairs(d) do
+        if k == "skeleton" then for _, l in ipairs(v) do l:Remove() end
+        else v:Remove() end
+    end
+    drawings[player] = nil
+end
+
+-- ── Chams ──
+local function CreateChams(player)
+    local char = player.Character
+    if not char then return end
+    if chams[player] then chams[player]:Destroy() end
+    local h = Instance.new("Highlight")
+    h.FillTransparency    = 0.5
+    h.OutlineTransparency = 0
+    h.DepthMode           = Enum.HighlightDepthMode.AlwaysOnTop
+    h.Adornee             = char
+    h.Parent              = char
+    chams[player]         = h
+end
+local function UpdateChams(player, visible, isTeam, isClosest)
+    local h = chams[player]
+    if not h then return end
+    if isClosest and CONFIG.closestHighlight then
+        h.FillColor    = CONFIG.colorClosest
+        h.OutlineColor = CONFIG.colorClosest
+    elseif isTeam then
+        h.FillColor    = CONFIG.colorTeammate
+        h.OutlineColor = Config.colorTeammate
+    elseif visible then
+        h.FillColor    = CONFIG.colorVisible
+        h.OutlineColor = CONFIG.colorVisible
+    else
+        h.FillColor    = CONFIG.colorWall
+        h.OutlineColor = CONFIG.colorWall
+    end
+end
+local function RemoveChams(player)
+    if chams[player] then chams[player]:Destroy(); chams[player] = nil end
+end
+
+-- ── Bounding Box ──
+local function GetBoundingBox(character)
+    local mnX,mnY =  math.huge, math.huge
+    local mxX,mxY = -math.huge,-math.huge
+    local any = false
+
+    for _, part in ipairs(character:GetChildren()) do
+        if part:IsA("BasePart") then
+            local s = part.Size
+            local corners = {
+                part.CFrame*CFrame.new( s.X/2, s.Y/2, s.Z/2),
+                part.CFrame*CFrame.new(-s.X/2, s.Y/2, s.Z/2),
+                part.CFrame*CFrame.new( s.X/2,-s.Y/2, s.Z/2),
+                part.CFrame*CFrame.new(-s.X/2,-s.Y/2, s.Z/2),
+                part.CFrame*CFrame.new( s.X/2, s.Y/2,-s.Z/2),
+                part.CFrame*CFrame.new(-s.X/2, s.Y/2,-s.Z/2),
+                part.CFrame*CFrame.new( s.X/2,-s.Y/2,-s.Z/2),
+                part.CFrame*CFrame.new(-s.X/2,-s.Y/2,-s.Z/2),
+            }
+            for _, cf in ipairs(corners) do
+                local sp, on = camera:WorldToViewportPoint(cf.Position)
+                if on then
+                    any = true
+                    if sp.X < mnX then mnX=sp.X end
+                    if sp.Y < mnY then mnY=sp.Y end
+                    if sp.X > mxX then mxX=sp.X end
+                    if sp.Y > mxY then mxY=sp.Y end
                 end
             end
-        end
-        if closest then
-            local aimPos = closest[getgenv().Settings.AimPart].Position + (closest.HumanoidRootPart.Velocity * getgenv().Settings.Prediction)
-            Camera.CFrame = Camera.CFrame:Lerp(CFrame.new(Camera.CFrame.Position, aimPos), getgenv().Settings.AimSmoothness)
         end
     end
 
-    -- ESP & Visuals
-    for _, v in pairs(Players:GetPlayers()) do
-        if v ~= LocalPlayer then
-            if not TracerLines[v.Name] then TracerLines[v.Name] = Drawing.new("Line"); TracerLines[v.Name].Thickness=1; TracerLines[v.Name].Transparency=1 end
-            local line = TracerLines[v.Name]
-            local char = v.Character
+    if not any then return nil end
+    return mnX, mnY, mxX-mnX, mxY-mnY
+end
 
-            if char and char:FindFirstChild("HumanoidRootPart") and char.Humanoid.Health > 0 then
-                local hrp = char.HumanoidRootPart
-                local pos, onScreen = Camera:WorldToViewportPoint(hrp.Position)
-                local isTeam = IsTeammate(v)
+-- ── Görünürlük ──
+local function IsVisible(character)
+    local hrp = character:FindFirstChild("HumanoidRootPart")
+    if not hrp then return false end
+    local rp = RaycastParams.new()
+    rp.FilterDescendantsInstances = {lp.Character, character}
+    rp.FilterType = Enum.RaycastFilterType.Exclude
+    local origin = camera.CFrame.Position
+    local result = workspace:Raycast(origin, hrp.Position - origin, rp)
+    return result == nil
+end
 
-                if not isTeam then
-                    -- Skeleton
-                    if getgenv().Settings.ESP_Skeleton and not ConnectedSkeletons[v.Name] then DrawSkeleton(char); ConnectedSkeletons[v.Name]=true elseif not getgenv().Settings.ESP_Skeleton then ConnectedSkeletons[v.Name]=nil end
-                    -- Tracers
-                    if getgenv().Settings.ESP_Tracers and onScreen then line.Visible=true; line.From=Vector2.new(Camera.ViewportSize.X/2,Camera.ViewportSize.Y); line.To=Vector2.new(pos.X,pos.Y); line.Color=getgenv().Settings.ESP_Color else line.Visible=false end
-                    -- Box
-                    if getgenv().Settings.ESP_Box then local hl=char:FindFirstChild("RG_Box") or Instance.new("Highlight",char); hl.Name="RG_Box"; hl.FillTransparency=1; hl.OutlineColor=getgenv().Settings.ESP_Color elseif char:FindFirstChild("RG_Box") then char.RG_Box:Destroy() end
-                    -- Name
-                    if getgenv().Settings.ESP_Name then 
-                        local bg=char:FindFirstChild("RG_Info") or Instance.new("BillboardGui",char); bg.Name="RG_Info"; bg.Adornee=char:FindFirstChild("Head"); bg.Size=UDim2.new(0,100,0,50); bg.StudsOffset=Vector3.new(0,2,0); bg.AlwaysOnTop=true
-                        local txt=bg:FindFirstChild("T") or Instance.new("TextLabel",bg); txt.Name="T"; txt.BackgroundTransparency=1; txt.Size=UDim2.new(1,0,1,0); txt.TextColor3=getgenv().Settings.ESP_Color; txt.TextStrokeTransparency=0
-                        txt.Text = v.Name
-                        if getgenv().Settings.ESP_Distance then txt.Text = txt.Text.."\n["..math.floor((LocalPlayer.Character.HumanoidRootPart.Position - hrp.Position).Magnitude).."m]" end
-                    elseif char:FindFirstChild("RG_Info") then char.RG_Info:Destroy() end
-                else
-                    line.Visible=false; if char:FindFirstChild("RG_Box") then char.RG_Box:Destroy() end; if char:FindFirstChild("RG_Info") then char.RG_Info:Destroy() end
-                end
-            else
-                line.Visible=false
-            end
+-- ── Oyuncu FOV içinde mi? ──
+local function InFOV(hrp)
+    local sp, onScreen = camera:WorldToViewportPoint(hrp.Position)
+    if not onScreen then return false, math.huge end
+    local vp = camera.ViewportSize
+    local dx = sp.X - vp.X/2
+    local dy = sp.Y - vp.Y/2
+    local dist2D = math.sqrt(dx*dx + dy*dy)
+    return dist2D <= CONFIG.fovRadius, dist2D
+end
+
+-- ── Ana güncelleme ──
+local function DrawCornerBox(d, bx, by, bw, bh, color)
+    local cl = bw * 0.22
+    local ch = bh * 0.22
+    -- Üst-sol
+    d.c1a.From=Vector2.new(bx,by);       d.c1a.To=Vector2.new(bx+cl,by)
+    d.c1b.From=Vector2.new(bx,by);       d.c1b.To=Vector2.new(bx,by+ch)
+    -- Üst-sağ
+    d.c2a.From=Vector2.new(bx+bw,by);    d.c2a.To=Vector2.new(bx+bw-cl,by)
+    d.c2b.From=Vector2.new(bx+bw,by);    d.c2b.To=Vector2.new(bx+bw,by+ch)
+    -- Alt-sol
+    d.c3a.From=Vector2.new(bx,by+bh);    d.c3a.To=Vector2.new(bx+cl,by+bh)
+    d.c3b.From=Vector2.new(bx,by+bh);    d.c3b.To=Vector2.new(bx,by+bh-ch)
+    -- Alt-sağ
+    d.c4a.From=Vector2.new(bx+bw,by+bh); d.c4a.To=Vector2.new(bx+bw-cl,by+bh)
+    d.c4b.From=Vector2.new(bx+bw,by+bh); d.c4b.To=Vector2.new(bx+bw,by+bh-ch)
+    for _,l in pairs({d.c1a,d.c1b,d.c2a,d.c2b,d.c3a,d.c3b,d.c4a,d.c4b}) do
+        l.Color=color; l.Visible=true
+    end
+    d.boxTop.Visible=false; d.boxBottom.Visible=false
+    d.boxLeft.Visible=false; d.boxRight.Visible=false
+end
+
+local function DrawFullBox(d, bx, by, bw, bh, color)
+    d.boxTop.From=Vector2.new(bx,by);       d.boxTop.To=Vector2.new(bx+bw,by)
+    d.boxBottom.From=Vector2.new(bx,by+bh); d.boxBottom.To=Vector2.new(bx+bw,by+bh)
+    d.boxLeft.From=Vector2.new(bx,by);      d.boxLeft.To=Vector2.new(bx,by+bh)
+    d.boxRight.From=Vector2.new(bx+bw,by);  d.boxRight.To=Vector2.new(bx+bw,by+bh)
+    for _,l in pairs({d.boxTop,d.boxBottom,d.boxLeft,d.boxRight}) do
+        l.Color=color; l.Visible=true
+    end
+    for _,l in pairs({d.c1a,d.c1b,d.c2a,d.c2b,d.c3a,d.c3b,d.c4a,d.c4b}) do
+        l.Visible=false
+    end
+end
+
+local function UpdatePlayer(player, char, humanoid, hrp, lpRoot, isClosest)
+    local d = drawings[player]
+    if not d then return end
+
+    local dist3D = (lpRoot.Position - hrp.Position).Magnitude
+    local isTeam = CONFIG.teamCheck and IsSameTeam(player)
+    local visible = IsVisible(char)
+
+    local color
+    if isClosest and CONFIG.closestHighlight then
+        color = CONFIG.colorClosest
+    elseif isTeam then
+        color = CONFIG.colorTeammate
+    elseif visible then
+        color = CONFIG.colorVisible
+    else
+        color = CONFIG.colorWall
+    end
+
+    if isTeam and not CONFIG.showTeammates then
+        HideAll(player)
+        RemoveChams(player)
+        return
+    end
+
+    local bx,by,bw,bh = GetBoundingBox(char)
+    if not bx then HideAll(player); return end
+
+    -- BOX
+    if CONFIG.box then
+        if CONFIG.cornerBox then
+            DrawCornerBox(d, bx, by, bw, bh, color)
         else
-            if TracerLines[v.Name] then TracerLines[v.Name]:Remove(); TracerLines[v.Name]=nil end
+            DrawFullBox(d, bx, by, bw, bh, color)
+        end
+    else
+        for _,l in pairs({d.boxTop,d.boxBottom,d.boxLeft,d.boxRight,
+                          d.c1a,d.c1b,d.c2a,d.c2b,d.c3a,d.c3b,d.c4a,d.c4b}) do
+            l.Visible=false
         end
     end
+
+    -- KAFA NOKTASI
+    if CONFIG.headDot then
+        local head = char:FindFirstChild("Head")
+        if head then
+            local sp, on = camera:WorldToViewportPoint(head.Position)
+            if on then
+                d.headDot.Position = Vector2.new(sp.X, sp.Y)
+                d.headDot.Color    = color
+                d.headDot.Radius   = math.clamp(8 / (dist3D / 50), 2, 8)
+                d.headDot.Visible  = true
+            else d.headDot.Visible = false end
+        end
+    else d.headDot.Visible = false end
+
+    -- İSİM
+    if CONFIG.names then
+        d.name.Text=player.Name; d.name.Position=Vector2.new(bx+bw/2,by-16)
+        d.name.Color=color; d.name.Visible=true
+    else d.name.Visible=false end
+
+    -- MESAFE
+    if CONFIG.distance then
+        d.dist.Text=string.format("%.0f studs", dist3D)
+        d.dist.Position=Vector2.new(bx+bw/2, by+bh+2)
+        d.dist.Color=Color3.fromRGB(180,180,180); d.dist.Visible=true
+    else d.dist.Visible=false end
+
+    -- CAN BARI
+    if CONFIG.healthBar then
+        local frac = math.clamp(humanoid.Health/humanoid.MaxHealth, 0, 1)
+        local barH = bh * frac
+        d.healthBG.Position=Vector2.new(bx-7,by); d.healthBG.Size=Vector2.new(4,bh); d.healthBG.Visible=true
+        d.healthBar.Position=Vector2.new(bx-7, by+(bh-barH))
+        d.healthBar.Size=Vector2.new(4,barH)
+        d.healthBar.Color=Color3.fromRGB(math.floor(255*(1-frac)), math.floor(255*frac), 0)
+        d.healthBar.Visible=true
+    else d.healthBG.Visible=false; d.healthBar.Visible=false end
+
+    -- SNAP LINE
+    if CONFIG.snapLines then
+        local vp=camera.ViewportSize
+        d.snapLine.From=Vector2.new(vp.X/2,vp.Y); d.snapLine.To=Vector2.new(bx+bw/2,by+bh)
+        d.snapLine.Color=color; d.snapLine.Transparency=0.4; d.snapLine.Visible=true
+    else d.snapLine.Visible=false end
+
+    -- SKELETON
+    if CONFIG.skeleton then
+        for i, conn in ipairs(BONES) do
+            local pA=char:FindFirstChild(conn[1])
+            local pB=char:FindFirstChild(conn[2])
+            local line=d.skeleton[i]
+            if pA and pB then
+                local sA,onA=camera:WorldToViewportPoint(pA.Position)
+                local sB,onB=camera:WorldToViewportPoint(pB.Position)
+                if onA and onB then
+                    line.From=Vector2.new(sA.X,sA.Y); line.To=Vector2.new(sB.X,sB.Y)
+                    line.Color=color; line.Visible=true
+                else line.Visible=false end
+            else line.Visible=false end
+        end
+    else for _,l in ipairs(d.skeleton) do l.Visible=false end end
+
+    -- CHAMS
+    if CONFIG.chams then
+        if not chams[player] then CreateChams(player) end
+        UpdateChams(player, visible, isTeam, isClosest)
+    else RemoveChams(player) end
+end
+
+-- ══════════════════════════════════════════════════
+--  OYUNCU OLAYLARI
+-- ══════════════════════════════════════════════════
+Players.PlayerAdded:Connect(function(player)
+    CreateDrawings(player)
+    player.CharacterAdded:Connect(function()
+        task.wait(1)
+        if CONFIG.chams then CreateChams(player) end
+    end)
 end)
 
--- Movement & Skins
-local FlyBV=nil
+Players.PlayerRemoving:Connect(function(player)
+    RemoveAll(player)
+    RemoveChams(player)
+end)
+
+for _, player in ipairs(Players:GetPlayers()) do
+    if player ~= lp then
+        CreateDrawings(player)
+        task.delay(1, function()
+            if CONFIG.chams then CreateChams(player) end
+        end)
+    end
+end
+
+-- ══════════════════════════════════════════════════
+--  ANA DÖNGÜ
+-- ══════════════════════════════════════════════════
 RunService.RenderStepped:Connect(function()
-    if getgenv().Settings.Noclip and LocalPlayer.Character then for _,p in pairs(LocalPlayer.Character:GetDescendants()) do if p:IsA("BasePart") then p.CanCollide=false end end end
-    if getgenv().Settings.Fly and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
-        local hrp=LocalPlayer.Character.HumanoidRootPart
-        if not FlyBV then FlyBV=Instance.new("BodyVelocity",hrp); FlyBV.MaxForce=Vector3.new(math.huge,math.huge,math.huge) end
-        local move=Vector3.new(0,0,0)
-        if UserInputService:IsKeyDown(Enum.KeyCode.W) then move=move+Camera.CFrame.LookVector end
-        if UserInputService:IsKeyDown(Enum.KeyCode.S) then move=move-Camera.CFrame.LookVector end
-        if UserInputService:IsKeyDown(Enum.KeyCode.A) then move=move-Camera.CFrame.RightVector end
-        if UserInputService:IsKeyDown(Enum.KeyCode.D) then move=move+Camera.CFrame.RightVector end
-        if UserInputService:IsKeyDown(Enum.KeyCode.Space) then move=move+Vector3.new(0,1,0) end
-        if UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) then move=move-Vector3.new(0,1,0) end
-        FlyBV.Velocity=move*getgenv().Settings.FlySpeed
-    else if FlyBV then FlyBV:Destroy(); FlyBV=nil end end
-end)
-
-task.spawn(function()
-    while task.wait(0.1) do
-        if LocalPlayer.Character and (getgenv().Settings.Skin_Rainbow or getgenv().Settings.Skin_Custom) then
-            local col = getgenv().Settings.Skin_Rainbow and Color3.fromHSV(tick()%5/5,1,1) or getgenv().Settings.Skin_Color
-            for _,t in pairs(LocalPlayer.Character:GetChildren()) do
-                if t:IsA("Tool") then for _,p in pairs(t:GetDescendants()) do if p:IsA("BasePart") or p:IsA("MeshPart") then p.Color=col end end end
-            end
+    if not CONFIG.enabled then
+        for _, pl in ipairs(Players:GetPlayers()) do
+            if pl ~= lp then HideAll(pl); RemoveChams(pl) end
         end
+        return
+    end
+
+    local lpChar = lp.Character
+    if not lpChar then return end
+    local lpRoot = lpChar:FindFirstChild("HumanoidRootPart")
+    if not lpRoot then return end
+
+    -- En yakın düşmanı bul
+    local closestPlayer = nil
+    local closestDist   = math.huge
+
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player == lp then continue end
+        local char = player.Character
+        local hrp  = char and char:FindFirstChild("HumanoidRootPart")
+        if not hrp then continue end
+        local d = (lpRoot.Position - hrp.Position).Magnitude
+        local inFov, _ = InFOV(hrp)
+        -- En yakın = FOV içindeki en yakın
+        if inFov and d < closestDist then
+            closestDist   = d
+            closestPlayer = player
+        end
+    end
+
+    -- Herkesi çiz
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player == lp then continue end
+
+        local char     = player.Character
+        local humanoid = char and char:FindFirstChild("Humanoid")
+        local hrp      = char and char:FindFirstChild("HumanoidRootPart")
+
+        if not char or not humanoid or not hrp then
+            HideAll(player); continue
+        end
+        if humanoid.Health <= 0 then
+            HideAll(player); RemoveChams(player); continue
+        end
+
+        local dist = (lpRoot.Position - hrp.Position).Magnitude
+        if dist > CONFIG.maxDistance then HideAll(player); continue end
+
+        if not drawings[player] then CreateDrawings(player) end
+        UpdatePlayer(player, char, humanoid, hrp, lpRoot, player == closestPlayer)
     end
 end)
 
--- UI Kontrolleri
-local Dragging, DragInput, DragStart, StartPos
-TopBar.InputBegan:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseButton1 then Dragging = true; DragStart = input.Position; StartPos = Main.Position end end)
-TopBar.InputChanged:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseMovement then DragInput = input end end)
-UserInputService.InputChanged:Connect(function(input) if input == DragInput and Dragging then local Delta = input.Position - DragStart; Main.Position = UDim2.new(StartPos.X.Scale, StartPos.X.Offset + Delta.X, StartPos.Y.Scale, StartPos.Y.Offset + Delta.Y) end end)
-UserInputService.InputEnded:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseButton1 then Dragging = false end end)
-UserInputService.InputBegan:Connect(function(i) if i.KeyCode == getgenv().Settings.MenuKey then Main.Visible = not Main.Visible end; if i.KeyCode == Enum.KeyCode.X then getgenv().Settings.Fly = not getgenv().Settings.Fly end end)
-
-SendNotif("RoGG Hub v1.1 Restored!", true)
+print("[ESP v2] ✅ Hazır! INSERT → menü aç/kapat")
