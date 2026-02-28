@@ -69,7 +69,7 @@ win.Position          = UDim2.new(0, 30, 0, 30)
 win.BackgroundColor3  = Color3.fromRGB(12, 12, 18)
 win.BorderSizePixel   = 0
 win.Active            = true
-win.Draggable         = true
+win.Draggable         = false  -- Executor'da çalışmaz, custom drag kullanıyoruz
 win.Visible           = false
 win.Parent            = gui
 Instance.new("UICorner", win).CornerRadius = UDim.new(0, 10)
@@ -399,6 +399,73 @@ UserInputService.InputBegan:Connect(function(input, gp)
         end
     end
 end)
+
+-- ══════════════════════════════════════════════════
+--  CUSTOM DRAG SİSTEMİ
+--  (Executor ortamında Draggable=true çalışmaz,
+--   bu yüzden UserInputService ile yapıyoruz)
+-- ══════════════════════════════════════════════════
+do
+    local dragging   = false
+    local dragStart  = nil   -- Mouse'un başlangıç pozisyonu
+    local winStart   = nil   -- Pencerenin başlangıç pozisyonu
+
+    -- Başlık çubuğuna basınca drag başlar
+    titleBar.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1
+        or input.UserInputType == Enum.UserInputType.Touch then
+            dragging  = true
+            dragStart = input.Position
+            winStart  = win.Position
+        end
+    end)
+
+    -- Bırakınca drag biter
+    UserInputService.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1
+        or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = false
+        end
+    end)
+
+    -- Hareket ettikçe pencereyi taşı
+    UserInputService.InputChanged:Connect(function(input)
+        if not dragging then return end
+        if input.UserInputType ~= Enum.UserInputType.MouseMovement
+        and input.UserInputType ~= Enum.UserInputType.Touch then return end
+
+        local delta = input.Position - dragStart
+
+        -- Ekran sınırları içinde tut
+        local vp       = workspace.CurrentCamera.ViewportSize
+        local winW     = win.AbsoluteSize.X
+        local winH     = win.AbsoluteSize.Y
+        local newX     = math.clamp(winStart.X.Offset + delta.X, 0, vp.X - winW)
+        local newY     = math.clamp(winStart.Y.Offset + delta.Y, 0, vp.Y - winH)
+
+        win.Position = UDim2.new(0, newX, 0, newY)
+    end)
+
+    -- Başlık çubuğu üzerine gelince cursor değişimi (görsel ipucu)
+    titleBar.MouseEnter:Connect(function()
+        if not dragging then
+            -- Hafif parlama: taşınabilir olduğunu gösterir
+            TweenService:Create(glow, TweenInfo.new(0.15), {
+                Color = Color3.fromRGB(0, 255, 120),
+                Thickness = 2
+            }):Play()
+        end
+    end)
+
+    titleBar.MouseLeave:Connect(function()
+        if not dragging then
+            TweenService:Create(glow, TweenInfo.new(0.15), {
+                Color = Color3.fromRGB(0, 200, 100),
+                Thickness = 1.5
+            }):Play()
+        end
+    end)
+end
 
 -- ══════════════════════════════════════════════════
 --  GÖRSEL YARDIMCILAR: FOV + CROSSHAIR (Drawing)
